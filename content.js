@@ -60,21 +60,25 @@ function makeDraggable() {
   let xOffset = 0;
   let yOffset = 0;
 
-  const header = stopwatchElement.querySelector(".timer-header");
-
-  header.addEventListener("mousedown", dragStart);
+  // 전체 타이머 요소에 드래그 이벤트 추가
+  stopwatchElement.addEventListener("mousedown", dragStart);
   document.addEventListener("mousemove", drag);
   document.addEventListener("mouseup", dragEnd);
 
   function dragStart(e) {
-    if (e.target.classList.contains("timer-close")) return;
+    // 버튼들(시작, 일시정지, 리셋, 닫기)은 드래그 영역에서 제외
+    if (
+      e.target.classList.contains("timer-close") ||
+      e.target.classList.contains("timer-start") ||
+      e.target.classList.contains("timer-pause") ||
+      e.target.classList.contains("timer-reset")
+    ) {
+      return;
+    }
 
     initialX = e.clientX - xOffset;
     initialY = e.clientY - yOffset;
-
-    if (e.target === header || header.contains(e.target)) {
-      isDragging = true;
-    }
+    isDragging = true;
   }
 
   function drag(e) {

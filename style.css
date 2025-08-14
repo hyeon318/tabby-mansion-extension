@@ -1,4 +1,4 @@
-/* TabbyMansion Stopwatch Overlay Styles */
+/* TabbyMansion Floating Timer Styles */
 #tabby-mansion-stopwatch {
   position: fixed;
   top: 20px;
@@ -15,6 +15,7 @@
   user-select: none;
   opacity: 0.95;
   transition: all 0.3s ease;
+  cursor: move;
 }
 
 #tabby-mansion-stopwatch:hover {
@@ -27,7 +28,6 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 15px 8px 15px;
-  cursor: move;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -112,6 +112,12 @@
   font-weight: 500;
   transition: all 0.2s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 버튼들에 대해 기본 커서 유지 */
+.timer-btn,
+.timer-close {
+  cursor: pointer !important;
 }
 
 .timer-btn:hover {

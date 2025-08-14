@@ -24,6 +24,10 @@
       "resources": [
         "stats.html",
         "stats.js",
+        "common.css",
+        "popup.css",
+        "stats.css",
+        "style.css",
         "vendor/chart.umd.js",
         "vendor/date-fns.umd.js",
         "vendor/date-fns-tz.umd.js"

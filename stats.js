@@ -60,6 +60,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
 
   /**
+   * DOM 요소 존재 여부 확인
+   */
+  function validateDOMElements() {
+    const requiredElements = [
+      "total-time",
+      "total-sites",
+      "total-sessions",
+      "current-sessions",
+      "start-date",
+      "end-date",
+      "start-time",
+      "end-time",
+      "timezone-select",
+      "time-range-display",
+      "apply-filter",
+      "site-filter",
+      "view-daily",
+      "view-hourly",
+      "view-weekly",
+      "time-chart",
+      "distribution-chart",
+      "timeline-container",
+      "refresh-data",
+      "reset-filter",
+      "export-data",
+      "time-list-container",
+      "results-section",
+      "results-period",
+    ];
+
+    const missingElements = requiredElements.filter(
+      id => !document.getElementById(id)
+    );
+
+    if (missingElements.length > 0) {
+      console.warn("Missing DOM elements:", missingElements);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * 시간 포맷팅 함수 - 동적 단위 스케일링
    */
   function formatDuration(seconds) {
@@ -774,49 +817,73 @@ document.addEventListener("DOMContentLoaded", async () => {
    */
   function setupEventListeners() {
     // 필터 적용
-    applyFilterBtn.addEventListener("click", async () => {
-      await applyFilters();
-    });
+    if (applyFilterBtn) {
+      applyFilterBtn.addEventListener("click", async () => {
+        await applyFilters();
+      });
+    }
 
     // 필터 초기화
-    resetFilterBtn.addEventListener("click", async () => {
-      await resetFilters();
-    });
+    if (resetFilterBtn) {
+      resetFilterBtn.addEventListener("click", async () => {
+        await resetFilters();
+      });
+    }
 
     // 새로고침
-    refreshDataBtn.addEventListener("click", async () => {
-      await refreshData();
-    });
+    if (refreshDataBtn) {
+      refreshDataBtn.addEventListener("click", async () => {
+        await refreshData();
+      });
+    }
 
     // 데이터 내보내기
-    exportDataBtn.addEventListener("click", () => {
-      exportData();
-    });
+    if (exportDataBtn) {
+      exportDataBtn.addEventListener("click", () => {
+        exportData();
+      });
+    }
 
     // 분석 단위 변경
-    viewDailyBtn.addEventListener("click", () => setView("daily"));
-    viewHourlyBtn.addEventListener("click", () => setView("hourly"));
-    viewWeeklyBtn.addEventListener("click", () => setView("weekly"));
+    if (viewDailyBtn) {
+      viewDailyBtn.addEventListener("click", () => setView("daily"));
+    }
+    if (viewHourlyBtn) {
+      viewHourlyBtn.addEventListener("click", () => setView("hourly"));
+    }
+    if (viewWeeklyBtn) {
+      viewWeeklyBtn.addEventListener("click", () => setView("weekly"));
+    }
 
     // 타임존 변경
-    timezoneSelectEl.addEventListener("change", async () => {
-      currentTimezone = timezoneSelectEl.value;
-      await applyFilters();
-    });
+    if (timezoneSelectEl) {
+      timezoneSelectEl.addEventListener("change", async () => {
+        currentTimezone = timezoneSelectEl.value;
+        await applyFilters();
+      });
+    }
 
     // 사이트 필터 변경
-    siteFilterEl.addEventListener("change", async () => {
-      currentFilters.site = siteFilterEl.value;
-      await applyFilters();
-    });
+    if (siteFilterEl) {
+      siteFilterEl.addEventListener("change", async () => {
+        currentFilters.site = siteFilterEl.value;
+        await applyFilters();
+      });
+    }
 
     // 날짜 입력 변경
-    startDateEl.addEventListener("change", () => updateTimeRangeDisplay());
-    endDateEl.addEventListener("change", () => updateTimeRangeDisplay());
-    if (startTimeEl)
+    if (startDateEl) {
+      startDateEl.addEventListener("change", () => updateTimeRangeDisplay());
+    }
+    if (endDateEl) {
+      endDateEl.addEventListener("change", () => updateTimeRangeDisplay());
+    }
+    if (startTimeEl) {
       startTimeEl.addEventListener("change", () => updateTimeRangeDisplay());
-    if (endTimeEl)
+    }
+    if (endTimeEl) {
       endTimeEl.addEventListener("change", () => updateTimeRangeDisplay());
+    }
 
     // 상세 데이터 리스트 클릭 이벤트 리스너
     if (timelineContainer) {
@@ -1836,7 +1903,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       siteListHtml += `
         <div class="site-item">
-          <div class="site-info">
+          <div class="site-item-info">
             <div class="site-color" style="background-color: ${color}"></div>
             <div class="site-domain">${domain}</div>
           </div>
@@ -1895,6 +1962,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   // 초기화
   // =========================================================================
+
+  // DOM 요소 검증
+  if (!validateDOMElements()) {
+    console.error(
+      "Required DOM elements are missing. Please check the HTML structure."
+    );
+    return;
+  }
 
   setupEventListeners();
   initializePage();
