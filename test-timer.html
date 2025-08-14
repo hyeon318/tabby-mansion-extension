@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="TabbyMansion - 집중 작업을 위한 타이머 & 탭 추적기"
+    />
+    <meta name="theme-color" content="#667eea" />
+    <title>TabbyMansion 공유 타이머 테스트</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 30px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #ffd700;
+      }
+
+      .test-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 15px;
+      }
+
+      .test-section h2 {
+        color: #ffd700;
+        margin-bottom: 15px;
+      }
+
+      .test-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .test-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .test-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .status {
+        margin-top: 15px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .instructions {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+
+      .instructions h3 {
+        color: #ffd700;
+        margin-bottom: 10px;
+      }
+
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .instructions li {
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>⏱️ TabbyMansion 공유 타이머 테스트</h1>
+
+      <div class="instructions">
+        <h3>테스트 방법:</h3>
+        <ul>
+          <li>Chrome Extension을 설치하고 활성화하세요</li>
+          <li>Extension 팝업에서 타이머를 시작/일시정지/리셋해보세요</li>
+          <li>여러 탭에서 동일한 타이머 상태가 공유되는지 확인하세요</li>
+          <li>브라우저를 재시작한 후 타이머 상태가 유지되는지 확인하세요</li>
+        </ul>
+      </div>
+
+      <div class="test-section">
+        <h2>🔧 백그라운드 메시지 테스트</h2>
+        <div class="test-buttons">
+          <button class="test-btn" onclick="testTimerGet()">
+            타이머 상태 가져오기
+          </button>
+          <button class="test-btn" onclick="testTimerStart()">
+            타이머 시작
+          </button>
+          <button class="test-btn" onclick="testTimerPause()">
+            타이머 일시정지
+          </button>
+          <button class="test-btn" onclick="testTimerReset()">
+            타이머 리셋
+          </button>
+        </div>
+        <div class="status" id="status">상태: 대기 중...</div>
+      </div>
+
+      <div class="test-section">
+        <h2>📊 스토리지 테스트</h2>
+        <div class="test-buttons">
+          <button class="test-btn" onclick="testStorageGet()">
+            스토리지 읽기
+          </button>
+          <button class="test-btn" onclick="testStorageSet()">
+            스토리지 쓰기
+          </button>
+        </div>
+        <div class="status" id="storage-status">스토리지 상태: 대기 중...</div>
+      </div>
+
+      <div class="test-section">
+        <h2>🔄 실시간 업데이트 테스트</h2>
+        <div class="test-buttons">
+          <button class="test-btn" onclick="startRealtimeTest()">
+            실시간 테스트 시작
+          </button>
+          <button class="test-btn" onclick="stopRealtimeTest()">
+            실시간 테스트 중지
+          </button>
+        </div>
+        <div class="status" id="realtime-status">실시간 상태: 대기 중...</div>
+      </div>
+    </div>
+
+    <script>
+      let realtimeInterval = null;
+
+      // 타이머 상태 가져오기
+      async function testTimerGet() {
+        try {
+          const response = await chrome.runtime.sendMessage({
+            action: "TIMER_GET",
+          });
+          document.getElementById(
+            "status"
+          ).textContent = `타이머 상태: ${JSON.stringify(response, null, 2)}`;
+        } catch (error) {
+          document.getElementById(
+            "status"
+          ).textContent = `오류: ${error.message}`;
+        }
+      }
+
+      // 타이머 시작
+      async function testTimerStart() {
+        try {
+          const response = await chrome.runtime.sendMessage({
+            action: "TIMER_START",
+            label: "테스트 타이머",
+          });
+          document.getElementById(
+            "status"
+          ).textContent = `타이머 시작: ${JSON.stringify(response, null, 2)}`;
+        } catch (error) {
+          document.getElementById(
+            "status"
+          ).textContent = `오류: ${error.message}`;
+        }
+      }
+
+      // 타이머 일시정지
+      async function testTimerPause() {
+        try {
+          const response = await chrome.runtime.sendMessage({
+            action: "TIMER_PAUSE",
+          });
+          document.getElementById(
+            "status"
+          ).textContent = `타이머 일시정지: ${JSON.stringify(
+            response,
+            null,
+            2
+          )}`;
+        } catch (error) {
+          document.getElementById(
+            "status"
+          ).textContent = `오류: ${error.message}`;
+        }
+      }
+
+      // 타이머 리셋
+      async function testTimerReset() {
+        try {
+          const response = await chrome.runtime.sendMessage({
+            action: "TIMER_RESET",
+          });
+          document.getElementById(
+            "status"
+          ).textContent = `타이머 리셋: ${JSON.stringify(response, null, 2)}`;
+        } catch (error) {
+          document.getElementById(
+            "status"
+          ).textContent = `오류: ${error.message}`;
+        }
+      }
+
+      // 스토리지 읽기
+      async function testStorageGet() {
+        try {
+          const result = await chrome.storage.local.get(["timerState"]);
+          document.getElementById(
+            "storage-status"
+          ).textContent = `스토리지 읽기: ${JSON.stringify(result, null, 2)}`;
+        } catch (error) {
+          document.getElementById(
+            "storage-status"
+          ).textContent = `오류: ${error.message}`;
+        }
+      }
+
+      // 스토리지 쓰기
+      async function testStorageSet() {
+        try {
+          const testData = {
+            status: "paused",
+            startedAt: null,
+            accumulatedMs: 0,
+            label: "테스트 데이터",
+          };
+          await chrome.storage.local.set({ timerState: testData });
+          document.getElementById(
+            "storage-status"
+          ).textContent = `스토리지 쓰기 완료: ${JSON.stringify(
+            testData,
+            null,
+            2
+          )}`;
+        } catch (error) {
+          document.getElementById(
+            "storage-status"
+          ).textContent = `오류: ${error.message}`;
+        }
+      }
+
+      // 실시간 테스트 시작
+      function startRealtimeTest() {
+        if (realtimeInterval) {
+          clearInterval(realtimeInterval);
+        }
+
+        realtimeInterval = setInterval(async () => {
+          try {
+            const response = await chrome.runtime.sendMessage({
+              action: "TIMER_GET",
+            });
+            const now = new Date().toLocaleTimeString();
+            document.getElementById(
+              "realtime-status"
+            ).textContent = `[${now}] 실시간 상태: ${JSON.stringify(
+              response.state,
+              null,
+              2
+            )}`;
+          } catch (error) {
+            document.getElementById(
+              "realtime-status"
+            ).textContent = `실시간 오류: ${error.message}`;
+          }
+        }, 1000);
+
+        document.getElementById("realtime-status").textContent =
+          "실시간 테스트 시작됨 (1초마다 업데이트)";
+      }
+
+      // 실시간 테스트 중지
+      function stopRealtimeTest() {
+        if (realtimeInterval) {
+          clearInterval(realtimeInterval);
+          realtimeInterval = null;
+        }
+        document.getElementById("realtime-status").textContent =
+          "실시간 테스트 중지됨";
+      }
+
+      // 스토리지 변경 리스너
+      chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === "local" && changes.timerState) {
+          const now = new Date().toLocaleTimeString();
+          document.getElementById(
+            "storage-status"
+          ).textContent = `[${now}] 스토리지 변경 감지: ${JSON.stringify(
+            changes.timerState.newValue,
+            null,
+            2
+          )}`;
+        }
+      });
+
+      // 페이지 로드 시 초기 상태 확인
+      window.addEventListener("load", () => {
+        testTimerGet();
+        testStorageGet();
+      });
+    </script>
+  </body>
+</html>

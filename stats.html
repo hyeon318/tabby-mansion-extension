@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TabbyMansion - 상세 통계</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="TabbyMansion - 사이트 사용 통계와 시간 관리 인사이트"
+    />
+    <meta name="theme-color" content="#667eea" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .logo {
+        font-size: 32px;
+        font-weight: bold;
+      }
+
+      .stats-today-date {
+        font-size: 14px;
+        opacity: 0.7;
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 12px;
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+      }
+
+      .results-section {
+        margin-top: 30px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.5s ease;
+      }
+
+      .results-section.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .results-header {
+        text-align: center;
+        margin-bottom: 25px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+      }
+
+      .results-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #ffd700;
+      }
+
+      .results-period {
+        font-size: 16px;
+        opacity: 0.9;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        display: inline-block;
+      }
+
+      .subtitle {
+        font-size: 16px;
+        opacity: 0.8;
+      }
+
+      .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .controls {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .filter-section {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .filter-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #ffd700;
+      }
+
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .filter-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .date-range {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .date-separator {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+      }
+
+      .view-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .filter-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+      }
+
+      .date-input,
+      .select-input {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: white;
+        font-size: 14px;
+      }
+
+      .date-input:focus,
+      .select-input:focus {
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      /* selectbox 텍스트 색상 수정 */
+      select,
+      select option {
+        color: #111;
+        background: white;
+      }
+
+      select:disabled {
+        color: #666;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .btn.active {
+        background: rgba(255, 255, 255, 0.4);
+        font-weight: 500;
+      }
+
+      .btn-primary {
+        background: rgba(76, 175, 80, 0.8);
+        font-weight: 600;
+        padding: 10px 20px;
+      }
+
+      .btn-primary:hover {
+        background: rgba(76, 175, 80, 1);
+      }
+
+      .btn-secondary {
+        background: rgba(156, 39, 176, 0.8);
+        font-weight: 500;
+        padding: 10px 20px;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(156, 39, 176, 1);
+      }
+
+      .btn.disabled {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.4);
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .btn.disabled:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: none;
+      }
+
+      /* 툴팁 스타일 */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+      }
+
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 280px;
+        background-color: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        text-align: left;
+        border-radius: 8px;
+        padding: 12px;
+        position: absolute;
+        z-index: 1000;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -140px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      /* 툴팁 화살표 */
+      .tooltip .tooltiptext::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+      }
+
+      /* 로딩 상태 */
+      .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        z-index: 10;
+      }
+
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #fff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* 사이트 목록 스타일 */
+      .site-list-container {
+        margin-top: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 15px;
+        backdrop-filter: blur(10px);
+      }
+
+      .site-list-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 10px;
+        text-align: center;
+      }
+
+      .site-list {
+        max-height: 200px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .site-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        min-width: 0;
+      }
+
+      .site-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(3px);
+      }
+
+      .site-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .site-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .site-domain {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+      }
+
+      .site-time {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 600;
+      }
+
+      .site-percentage {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+        margin-left: 8px;
+      }
+
+      .charts-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      .chart-container {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+      }
+
+      .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        text-align: center;
+        color: #ffd700;
+      }
+
+      .chart-subtitle {
+        font-size: 12px;
+        text-align: center;
+        opacity: 0.8;
+        margin-bottom: 15px;
+      }
+
+      .chart-stats {
+        margin-top: 15px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .chart-wrapper {
+        position: relative;
+        height: 300px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        padding: 15px;
+      }
+
+      .chart-wrapper canvas {
+        max-height: 100%;
+      }
+
+      .timeline-section {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+      }
+
+      .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .timeline-title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .timeline-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .timeline-container {
+        height: 400px; /* 고정 높이로 스크롤 영역 안정화 */
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      .timeline-day {
+        margin-bottom: 20px;
+      }
+
+      .day-header {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #ffd700;
+      }
+
+      .day-summary {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-bottom: 15px;
+      }
+
+      .hour-group {
+        margin-bottom: 15px;
+      }
+
+      .hour-header {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        opacity: 0.9;
+      }
+
+      .site-entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        margin-bottom: 5px;
+        font-size: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        gap: 10px; /* 요소 간 간격 */
+      }
+
+      .site-entry:hover {
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .site-info {
+        flex: 1;
+        position: relative;
+        min-width: 0; /* flex 아이템이 축소될 수 있도록 */
+        display: flex;
+        gap: 10px;
+      }
+
+      /* 타임라인 좌측: 제목 / URL 고정 비율 컬럼 */
+      .site-title-col {
+        flex: 0 0 55%;
+        max-width: 55%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 500;
+      }
+
+      .site-url-col {
+        flex: 0 0 45%;
+        max-width: 45%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 11px;
+      }
+
+      /* 타임라인 검색 입력 */
+      .timeline-search-input {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 6px 10px;
+        color: white;
+        font-size: 12px;
+        width: 220px;
+      }
+      .timeline-search-input::placeholder {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .site-domain {
+        font-weight: 500;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .site-title {
+        opacity: 0.7;
+        font-size: 11px;
+        margin-top: 2px;
+        margin-right: 7px;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .site-time {
+        color: #ffd700;
+        font-weight: 500;
+        min-width: 160px;
+        text-align: right;
+        flex-shrink: 0; /* 크기 고정 */
+      }
+      .site-time .visit-time {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 500;
+        margin-right: 6px;
+      }
+      .site-time .duration {
+        color: #ffd700;
+        font-weight: 700;
+        display: inline-block;
+        width: 60px; /* 고정 폭: 길어져도 동일 영역 사용 */
+        text-align: right;
+      }
+
+      /* 툴팁 스타일 개선 */
+      .site-domain[title]:hover::after,
+      .site-title[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        z-index: 1000;
+        max-width: 300px;
+        word-wrap: break-word;
+        white-space: normal;
+        line-height: 1.4;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+      }
+
+      .site-domain[title]:hover::after {
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 5px;
+      }
+
+      .site-title[title]:hover::after {
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 5px;
+      }
+
+      /* 상세 데이터 리스트 스타일 */
+      .data-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+      }
+
+      .data-list-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(3px);
+      }
+
+      .data-list-item.daily {
+        border-left-color: #4ecdc4;
+      }
+
+      .data-list-item.hourly {
+        border-left-color: #ff6b6b;
+      }
+
+      .data-list-item.weekly {
+        border-left-color: #96ceb4;
+      }
+
+      .data-list-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .data-list-date {
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffd700;
+      }
+
+      .data-list-time {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .data-list-stats {
+        display: flex;
+        gap: 20px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .data-list-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: #4ecdc4;
+        min-width: 80px;
+        text-align: right;
+      }
+
+      .data-list-sites {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 4px;
+      }
+
+      /* 시간별 사용 시간 리스트 스타일 */
+      .time-list-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .time-list-header {
+        margin-bottom: 15px;
+      }
+
+      .time-list-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #ffd700;
+      }
+
+      .time-list-container {
+        max-height: 200px;
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 10px;
+      }
+
+      .time-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        margin-bottom: 6px;
+        transition: all 0.3s ease;
+      }
+
+      .time-list-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(3px);
+      }
+
+      .time-list-date {
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .time-list-duration {
+        font-size: 14px;
+        font-weight: 600;
+        color: #4ecdc4;
+      }
+
+      .no-data {
+        text-align: center;
+        opacity: 0.6;
+        font-style: italic;
+        padding: 40px;
+      }
+
+      .refresh-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        opacity: 0.8;
+      }
+
+      .refresh-dot {
+        width: 8px;
+        height: 8px;
+        background: #4caf50;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .charts-section {
+          grid-template-columns: 1fr;
+        }
+
+        .control-row {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      /* Floating 새로고침 버튼 */
+      .floating-refresh-btn {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .floating-refresh-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+      }
+
+      .floating-refresh-btn:active {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .floating-refresh-btn.loading {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* No Data 스타일 개선 */
+      .no-data {
+        text-align: center;
+        padding: 60px 20px;
+        color: rgba(255, 255, 255, 0.7);
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 15px;
+        border: 2px dashed rgba(255, 255, 255, 0.2);
+      }
+
+      .no-data-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.6;
+      }
+
+      .no-data-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #ffd700;
+      }
+
+      .no-data-message {
+        font-size: 14px;
+        opacity: 0.8;
+        line-height: 1.5;
+      }
+
+      .time-range-info {
+        margin-top: 8px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="header-top">
+          <div class="logo">📊 TabbyMansion 상세 통계</div>
+          <div id="stats-today-date" class="stats-today-date"></div>
+        </div>
+        <div class="subtitle">
+          사이트 사용 패턴 분석 및 시간 관리 인사이트
+          <span class="refresh-indicator">
+            <span class="refresh-dot"></span>
+            실시간 업데이트
+          </span>
+        </div>
+      </div>
+
+      <!-- 필터 컨트롤 -->
+      <div class="controls">
+        <div class="filter-section">
+          <h3 class="filter-title">📅 조회 조건</h3>
+
+          <div class="filter-group">
+            <label class="filter-label">시간대 및 언어</label>
+            <select class="select-input" id="timezone-select">
+              <option value="Asia/Seoul">🇰🇷 한국 (KST)</option>
+              <option value="Europe/London">🇬🇧 영국 (GMT/BST)</option>
+              <option value="America/New_York">🇺🇸 뉴욕 (EST/EDT)</option>
+              <option value="America/Los_Angeles">
+                🇺🇸 로스앤젤레스 (PST/PDT)
+              </option>
+              <option value="Europe/Berlin">🇩🇪 베를린 (CET/CEST)</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">조회 기간</label>
+            <div class="date-range">
+              <input
+                type="date"
+                id="start-date"
+                class="date-input"
+                placeholder="시작일"
+              />
+              <input
+                type="time"
+                id="start-time"
+                class="date-input"
+                placeholder="시작 시각"
+                value="00:00"
+              />
+              <span class="date-separator">~</span>
+              <input
+                type="date"
+                id="end-date"
+                class="date-input"
+                placeholder="종료일"
+              />
+              <input
+                type="time"
+                id="end-time"
+                class="date-input"
+                placeholder="종료 시각"
+                value="23:59"
+              />
+            </div>
+            <div class="time-range-info">
+              <span id="time-range-display">시작일 00:00 ~ 종료일 23:59</span>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">사이트 필터</label>
+            <select class="select-input" id="site-filter">
+              <option value="">전체 사이트</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">분석 단위</label>
+            <div class="view-buttons">
+              <button class="btn active" id="view-daily">일별</button>
+              <button class="btn" id="view-hourly">시간별</button>
+              <button class="btn" id="view-weekly">주별</button>
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="apply-filter">
+              🔍 조회하기
+            </button>
+            <button class="btn btn-secondary" id="reset-filter">
+              🔄 초기화
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 조회 결과 섹션 -->
+      <div class="results-section" id="results-section" style="display: none">
+        <div class="results-header">
+          <h2 class="results-title">📈 조회 결과</h2>
+          <div class="results-period" id="results-period"></div>
+        </div>
+
+        <!-- 통계 개요 -->
+        <div class="stats-overview">
+          <div class="stat-card tooltip">
+            <div class="stat-value" id="total-time">0분</div>
+            <div class="stat-label">총 사용 시간</div>
+            <span class="tooltiptext"
+              >선택한 기간 동안 모든 사이트에서 보낸 총 시간입니다. 탭 전환
+              시점을 기준으로 계산됩니다.</span
+            >
+          </div>
+          <div class="stat-card tooltip">
+            <div class="stat-value" id="total-sites">0개</div>
+            <div class="stat-label">방문한 사이트</div>
+            <span class="tooltiptext"
+              >선택한 기간 동안 방문한 고유한 도메인 수입니다. 같은 사이트의
+              다른 페이지는 하나로 집계됩니다.</span
+            >
+          </div>
+          <div class="stat-card tooltip">
+            <div class="stat-value" id="total-sessions">0회</div>
+            <div class="stat-label">총 세션 수</div>
+            <span class="tooltiptext"
+              >탭을 활성화한 총 횟수입니다. 탭 전환할 때마다 새로운 세션으로
+              카운트됩니다.</span
+            >
+          </div>
+          <div class="stat-card tooltip">
+            <div class="stat-value" id="current-sessions">0회</div>
+            <div class="stat-label">현재 세션 수</div>
+            <span class="tooltiptext"
+              >현재 조회 기간 내에서 활성화된 탭의 총 횟수입니다. 탭 전환할
+              때마다 새로운 세션으로 카운트됩니다.</span
+            >
+          </div>
+        </div>
+
+        <!-- 차트 섹션 -->
+        <div class="charts-section">
+          <div class="chart-container">
+            <div class="chart-title">📈 기간별 사용 시간 추이</div>
+            <div class="chart-subtitle" id="time-chart-subtitle">
+              시간대별 사용 패턴을 확인하세요
+            </div>
+            <div
+              class="chart-meta"
+              id="time-chart-meta"
+              style="
+                text-align: center;
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.6);
+                margin-bottom: 10px;
+              "
+            ></div>
+            <div class="chart-wrapper" style="position: relative">
+              <canvas id="time-chart"></canvas>
+              <div
+                id="time-chart-loading"
+                class="loading-overlay"
+                style="display: none"
+              >
+                <div class="loading-spinner"></div>
+              </div>
+            </div>
+            <div class="chart-stats" id="time-chart-stats"></div>
+
+            <!-- 시간별 사용 시간 리스트 -->
+            <div class="time-list-section">
+              <div class="time-list-header">
+                <div class="time-list-title">📊 시간별 사용 시간 리스트</div>
+              </div>
+              <div class="time-list-container" id="time-list-container">
+                <div class="no-data">데이터를 불러오는 중...</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-title">🥧 사이트별 사용 시간 분포</div>
+            <div class="chart-subtitle" id="distribution-chart-subtitle">
+              가장 많이 사용한 사이트를 확인하세요
+            </div>
+            <div class="chart-wrapper" style="position: relative">
+              <canvas id="distribution-chart"></canvas>
+              <div
+                id="distribution-chart-loading"
+                class="loading-overlay"
+                style="display: none"
+              >
+                <div class="loading-spinner"></div>
+              </div>
+            </div>
+
+            <div class="chart-stats" id="distribution-chart-stats"></div>
+            <!-- 사이트 목록 추가 -->
+            <div class="site-list-container" id="site-list-container">
+              <div class="site-list-title">📋 사이트별 상세 정보</div>
+              <div class="site-list" id="site-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 타임라인 섹션 -->
+        <div class="timeline-section">
+          <div class="timeline-header">
+            <div class="timeline-title">📅 상세 데이터 리스트</div>
+            <div class="timeline-controls">
+              <input
+                class="timeline-search-input"
+                id="timeline-search"
+                type="text"
+                placeholder="제목/도메인/주소 검색"
+              />
+              <button class="btn" id="export-data">📤 데이터 내보내기</button>
+            </div>
+          </div>
+          <div class="timeline-container" id="timeline-container">
+            <div class="no-data">데이터를 불러오는 중...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating 새로고침 버튼 -->
+    <button class="floating-refresh-btn" id="refresh-data" title="새로고침">
+      🔄
+    </button>
+
+    <!-- Chart.js must load first -->
+    <script src="vendor/chart.umd.js"></script>
+    <!-- Date-fns for timezone handling -->
+    <script src="vendor/date-fns.umd.js"></script>
+    <script src="vendor/date-fns-tz.umd.js"></script>
+    <!-- Then load your script -->
+    <script src="stats.js"></script>
+  </body>
+</html>

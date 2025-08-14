@@ -1,0 +1,29 @@
+{
+  "name": "tabbymansion",
+  "version": "1.0.0",
+  "description": "Focus session timer with tab activity tracking",
+  "dependencies": {
+    "chart.js": "^4.4.2",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "build:date-fns": "webpack --config webpack.config.js --entry ./src/date-fns-bundle.js",
+    "build:date-fns-tz": "webpack --config webpack.config.js --entry ./src/date-fns-tz-bundle.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "timer",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "babel-loader": "^10.0.0",
+    "webpack": "^5.101.1",
+    "webpack-cli": "^6.0.1"
+  }
+}

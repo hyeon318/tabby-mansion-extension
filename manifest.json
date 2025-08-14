@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "TabbyMansion",
+  "short_name": "TabbyMansion",
+  "version": "1.0",
+  "description": "Focus session timer with tab activity tracking for deep work and coding tests",
+  "permissions": ["storage", "tabs", "activeTab", "windows"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TabbyMansion"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "stats.html",
+        "stats.js",
+        "vendor/chart.umd.js",
+        "vendor/date-fns.umd.js",
+        "vendor/date-fns-tz.umd.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

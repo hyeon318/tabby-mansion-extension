@@ -1,0 +1,190 @@
+/* TabbyMansion Stopwatch Overlay Styles */
+#tabby-mansion-stopwatch {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 200px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+  z-index: 999999;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  user-select: none;
+  opacity: 0.95;
+  transition: all 0.3s ease;
+}
+
+#tabby-mansion-stopwatch:hover {
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px 8px 15px;
+  cursor: move;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.current-time {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 15px 5px 15px;
+  color: #ffd700;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  opacity: 0.9;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timer-title {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.timer-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.timer-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.timer-display {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  font-family: "Courier New", monospace;
+  padding: 15px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.timer-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 15px;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 15px 15px 15px;
+}
+
+.timer-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timer-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.timer-btn:active {
+  transform: translateY(0);
+}
+
+.timer-start {
+  background: rgba(76, 175, 80, 0.8);
+}
+
+.timer-start:hover {
+  background: rgba(76, 175, 80, 1);
+}
+
+.timer-pause {
+  background: rgba(255, 193, 7, 0.8);
+}
+
+.timer-pause:hover {
+  background: rgba(255, 193, 7, 1);
+}
+
+.timer-reset {
+  background: rgba(244, 67, 54, 0.8);
+}
+
+.timer-reset:hover {
+  background: rgba(244, 67, 54, 1);
+}
+
+/* 반응형 처리 */
+@media (max-width: 768px) {
+  #tabby-mansion-stopwatch {
+    width: 180px;
+    top: 10px;
+    right: 10px;
+  }
+
+  .timer-display {
+    font-size: 24px;
+    padding: 12px;
+  }
+
+  .timer-btn {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+}
+
+/* 드래그 중 스타일 */
+#tabby-mansion-stopwatch.dragging {
+  cursor: grabbing;
+  opacity: 0.8;
+}
+
+/* 애니메이션 */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 0.95;
+  }
+}
+
+#tabby-mansion-stopwatch {
+  animation: slideIn 0.3s ease-out;
+}

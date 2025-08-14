@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chart.js Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .chart-container {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      canvas {
+        max-width: 100%;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 8px;
+        font-weight: bold;
+      }
+      .success {
+        background: rgba(76, 175, 80, 0.3);
+      }
+      .error {
+        background: rgba(244, 67, 54, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📊 Chart.js Loading Test</h1>
+
+      <div id="status" class="status">Loading Chart.js...</div>
+
+      <div class="chart-container">
+        <h2>Test Chart</h2>
+        <canvas id="testChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart.js must load first -->
+    <script src="vendor/chart.umd.js"></script>
+
+    <!-- Test script -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const statusEl = document.getElementById("status");
+
+        try {
+          // Check if Chart is defined
+          if (typeof Chart === "undefined") {
+            throw new Error("Chart is not defined");
+          }
+
+          statusEl.textContent = "✅ Chart.js loaded successfully!";
+          statusEl.className = "status success";
+
+          // Create a test chart
+          const ctx = document.getElementById("testChart").getContext("2d");
+
+          new Chart(ctx, {
+            type: "bar",
+            data: {
+              labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+              datasets: [
+                {
+                  label: "Test Data",
+                  data: [12, 19, 3, 5, 2, 3],
+                  backgroundColor: [
+                    "rgba(255, 99, 132, 0.7)",
+                    "rgba(54, 162, 235, 0.7)",
+                    "rgba(255, 205, 86, 0.7)",
+                    "rgba(75, 192, 192, 0.7)",
+                    "rgba(153, 102, 255, 0.7)",
+                    "rgba(255, 159, 64, 0.7)",
+                  ],
+                  borderColor: [
+                    "rgba(255, 99, 132, 1)",
+                    "rgba(54, 162, 235, 1)",
+                    "rgba(255, 205, 86, 1)",
+                    "rgba(75, 192, 192, 1)",
+                    "rgba(153, 102, 255, 1)",
+                    "rgba(255, 159, 64, 1)",
+                  ],
+                  borderWidth: 1,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                title: {
+                  display: true,
+                  text: "Chart.js UMD Build Test",
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    color: "rgba(255, 255, 255, 0.8)",
+                  },
+                  grid: {
+                    color: "rgba(255, 255, 255, 0.1)",
+                  },
+                },
+                x: {
+                  ticks: {
+                    color: "rgba(255, 255, 255, 0.8)",
+                  },
+                  grid: {
+                    color: "rgba(255, 255, 255, 0.1)",
+                  },
+                },
+              },
+            },
+          });
+
+          console.log("Chart.js version:", Chart.version);
+        } catch (error) {
+          statusEl.textContent = "❌ Error: " + error.message;
+          statusEl.className = "status error";
+          console.error("Chart.js test failed:", error);
+        }
+      });
+    </script>
+  </body>
+</html>
