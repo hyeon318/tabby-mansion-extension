@@ -16,7 +16,14 @@
     <div class="container">
       <div class="header">
         <div class="header-top">
-          <div class="logo">📊 TabbyMansion 상세 통계</div>
+          <div class="logo">
+            <img
+              src="public/images/icon48.png "
+              style="width: 30px; height: 30px"
+              alt="logo"
+            />
+            TabbyMansion 상세 통계
+          </div>
           <div id="stats-today-date" class="stats-today-date"></div>
         </div>
         <div class="subtitle">
@@ -33,9 +40,9 @@
         <div class="filter-section">
           <h3 class="filter-title">📅 조회 조건</h3>
 
-          <div class="filter-group">
+          <div class="filter-group" style="display: none">
             <label class="filter-label">시간대 및 언어</label>
-            <select class="select-input" id="timezone-select">
+            <select class="-iselectnput" id="timezone-select">
               <option value="Asia/Seoul">🇰🇷 한국 (KST)</option>
               <option value="Europe/London">🇬🇧 영국 (GMT/BST)</option>
               <option value="America/New_York">🇺🇸 뉴욕 (EST/EDT)</option>
@@ -82,7 +89,7 @@
             </div>
           </div>
 
-          <div class="filter-group">
+          <div class="filter-group" style="display: none">
             <label class="filter-label">사이트 필터</label>
             <select class="select-input" id="site-filter">
               <option value="">전체 사이트</option>
@@ -237,12 +244,60 @@
             <div class="no-data">데이터를 불러오는 중...</div>
           </div>
         </div>
+
+        <!-- 기록 관리 섹션 -->
+        <div class="data-management-section" id="data-management-section">
+          <div class="data-management-header">
+            <div class="data-management-title">🗑️ 기록 관리</div>
+            <div class="data-management-subtitle">
+              특정 날짜의 기록을 삭제하거나 전체 기록을 초기화할 수 있습니다
+            </div>
+          </div>
+
+          <div class="data-management-content">
+            <!-- 일자별 삭제 -->
+            <div class="delete-by-date-section">
+              <div class="section-title">📅 일자별 기록 삭제</div>
+              <div class="date-delete-controls">
+                <input
+                  type="date"
+                  id="delete-date"
+                  class="date-input"
+                  placeholder="삭제할 날짜 선택"
+                />
+                <button class="delete-date-btn" id="delete-date-btn">
+                  선택한 날짜 기록 삭제
+                </button>
+              </div>
+              <div class="delete-date-info">
+                선택한 날짜의 모든 탭 활동 기록이 삭제됩니다.
+              </div>
+            </div>
+
+            <!-- 전체 삭제 -->
+            <div class="delete-all-section">
+              <div class="section-title">⚠️ 전체 기록 삭제</div>
+              <div class="delete-all-controls">
+                <button class="delete-all-btn" id="delete-all-btn">
+                  전체 기록 삭제
+                </button>
+              </div>
+              <div class="delete-all-info">
+                모든 탭 활동 기록이 영구적으로 삭제됩니다. 복구할 수 없습니다.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Floating 새로고침 버튼 -->
     <button class="floating-refresh-btn" id="refresh-data" title="새로고침">
-      🔄
+      <img
+        src="public/images/normal.png"
+        alt="새로고침"
+        id="refresh-btn-image"
+      />
     </button>
 
     <!-- Chart.js must load first -->

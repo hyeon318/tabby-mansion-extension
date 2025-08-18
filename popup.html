@@ -14,7 +14,14 @@
   </head>
   <body>
     <div class="header">
-      <div class="logo">⏱️ TabbyMansion</div>
+      <div class="logo">
+        <img
+          src="public/images/icon48.png"
+          style="width: 22px; height: 22px"
+          alt="logo"
+        />
+        TabbyMansion
+      </div>
       <div class="subtitle">집중 작업을 위한 타이머 & 탭 추적기</div>
       <div id="today-date" class="today-date"></div>
     </div>
@@ -78,11 +85,14 @@
             차트
           </button>
           <button class="view-toggle-btn" id="log-view-btn">로그</button>
-          <button class="refresh-btn" id="refresh-btn">🔄</button>
-          <button class="detail-btn" id="detail-btn">상세보기</button>
-          <button class="clear-logs-btn" id="clear-logs-btn">
-            기록 지우기
+          <button class="refresh-btn" id="refresh-btn">
+            <img
+              src="public/images/normal.png"
+              alt="새로고침"
+              id="popup-refresh-btn-image"
+            />
           </button>
+          <button class="detail-btn" id="detail-btn">상세보기</button>
         </div>
       </div>
 

@@ -279,7 +279,7 @@ body {
   background: rgba(33, 150, 243, 0.8);
   border: none;
   color: white;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
@@ -287,31 +287,21 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.refresh-btn img {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s ease;
 }
 
 .refresh-btn:hover {
   background: rgba(33, 150, 243, 1);
   transform: rotate(180deg);
-}
-
-.clear-logs-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 5px;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.clear-logs-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
 }
 
 /* 차트 컨테이너 */

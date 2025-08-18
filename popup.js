@@ -2,7 +2,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const stopwatchToggle = document.getElementById("stopwatch-toggle");
   const tabTrackerToggle = document.getElementById("tab-tracker-toggle");
-  const clearLogsBtn = document.getElementById("clear-logs-btn");
   const logsContainer = document.getElementById("logs-container");
   const chartContainer = document.getElementById("chart-container");
   const chartViewBtn = document.getElementById("chart-view-btn");
@@ -313,16 +312,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    // 로그 지우기 - 디바운스 적용
-    clearLogsBtn.addEventListener("click", async () => {
-      try {
-        await chrome.storage.local.set({ tabLogs: [] });
-        debouncedDisplayStats();
-      } catch (error) {
-        console.error("로그 지우기 실패:", error);
-      }
-    });
-
     // 뷰 전환 버튼
     chartViewBtn.addEventListener("click", () => {
       chartViewBtn.classList.add("active");
@@ -342,7 +331,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     refreshBtn.addEventListener("click", async () => {
       if (refreshBtn.disabled) return;
 
-      refreshBtn.classList.add("spinning");
+      // 이미지를 wink로 변경
+      const refreshBtnImage = document.getElementById(
+        "popup-refresh-btn-image"
+      );
+      if (refreshBtnImage) {
+        refreshBtnImage.src = "public/images/wink.png";
+      }
+
       refreshBtn.disabled = true;
 
       try {
@@ -353,8 +349,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (error) {
         console.error("새로고침 실패:", error);
       } finally {
-        refreshBtn.classList.remove("spinning");
         refreshBtn.disabled = false;
+
+        // 1초 후 이미지를 normal로 변경
+        setTimeout(() => {
+          const refreshBtnImage = document.getElementById(
+            "popup-refresh-btn-image"
+          );
+          if (refreshBtnImage) {
+            refreshBtnImage.src = "public/images/normal.png";
+          }
+        }, 1000);
       }
     });
 

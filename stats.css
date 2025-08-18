@@ -30,6 +30,10 @@ body {
 .logo {
   font-size: 32px;
   font-weight: bold;
+  display: flex;
+  align-items: center;
+  color: #ffd700;
+  gap: 10px;
 }
 
 .stats-today-date {
@@ -529,8 +533,8 @@ select:disabled {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
@@ -543,6 +547,14 @@ select:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.floating-refresh-btn img {
+  width: 36px;
+  height: 36px;
+  transition: all 0.3s ease;
 }
 
 .floating-refresh-btn:hover {
@@ -702,4 +714,114 @@ select:disabled {
   color: rgba(255, 255, 255, 0.7);
   font-weight: 400;
   margin-left: 5px;
+}
+
+/* 기록 관리 섹션 스타일 */
+.data-management-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 20px;
+}
+
+.data-management-header {
+  margin-bottom: 25px;
+}
+
+.data-management-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffd700;
+  margin-bottom: 8px;
+}
+
+.data-management-subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.data-management-content {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.delete-by-date-section,
+.delete-all-section {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffd700;
+  margin-bottom: 15px;
+}
+
+.date-delete-controls,
+.delete-all-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.delete-date-btn,
+.delete-all-btn {
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.delete-date-btn:hover,
+.delete-all-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.delete-all-btn {
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+.delete-all-btn:hover {
+  background: linear-gradient(135deg, #c53030 0%, #a52a2a 100%);
+}
+
+.delete-date-info,
+.delete-all-info {
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+.delete-all-info {
+  color: #ff6b6b;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .date-delete-controls,
+  .delete-all-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .delete-date-btn,
+  .delete-all-btn {
+    width: 100%;
+  }
 }

@@ -1,4 +1,3 @@
-// TabbyMansion 상세 통계 페이지 - UMD 번들 사용 버전
 document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   // DOM 요소들
@@ -32,6 +31,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resultsSection = document.getElementById("results-section");
   const resultsPeriod = document.getElementById("results-period");
 
+  // 기록 관리 관련 요소들
+  const deleteDateEl = document.getElementById("delete-date");
+  const deleteDateBtn = document.getElementById("delete-date-btn");
+  const deleteAllBtn = document.getElementById("delete-all-btn");
+
   // =========================================================================
   // 전역 변수들
   // =========================================================================
@@ -59,9 +63,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 유틸리티 함수들
   // =========================================================================
 
-  /**
-   * DOM 요소 존재 여부 확인
-   */
+  /** 안전한 HTML 출력용 escape */
+  function esc(s = "") {
+    return String(s).replace(
+      /[&<>"']/g,
+      m =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[m])
+    );
+  }
+
+  /** DOM 요소 존재 여부 확인 */
   function validateDOMElements() {
     const requiredElements = [
       "total-time",
@@ -89,45 +106,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       "results-section",
       "results-period",
     ];
-
-    const missingElements = requiredElements.filter(
-      id => !document.getElementById(id)
-    );
-
-    if (missingElements.length > 0) {
-      console.warn("Missing DOM elements:", missingElements);
+    const missing = requiredElements.filter(id => !document.getElementById(id));
+    if (missing.length) {
+      console.warn("Missing DOM elements:", missing);
       return false;
     }
-
     return true;
   }
 
-  /**
-   * 시간 포맷팅 함수 - 동적 단위 스케일링
-   */
+  /** 시간 포맷팅 */
   function formatDuration(seconds) {
-    if (seconds < 5) {
-      return `${Math.round(seconds)}초`;
-    } else if (seconds < 60) {
-      return `${Math.round(seconds)}초`;
-    } else if (seconds < 3600) {
-      const minutes = Math.round(seconds / 60);
-      return `${minutes}분`;
-    } else {
-      const hours = Math.floor(seconds / 3600);
-      let minutes = Math.round((seconds - hours * 3600) / 60);
-      let normHours = hours;
-      if (minutes === 60) {
-        normHours += 1;
-        minutes = 0;
-      }
-      return `${normHours}시간 ${minutes}분`;
+    if (!Number.isFinite(seconds)) return "0초";
+    if (seconds < 60) return `${Math.round(seconds)}초`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}분`;
+    const h = Math.floor(seconds / 3600);
+    let m = Math.round((seconds - h * 3600) / 60);
+    let H = h;
+    if (m === 60) {
+      H += 1;
+      m = 0;
     }
+    return `${H}시간 ${m}분`;
   }
 
-  /**
-   * 날짜 포맷팅 함수 - 타임존 안전
-   */
+  /** 날짜 포맷팅 - 인풋 value용(yyyy-MM-dd) */
   function formatDateForInputTZ(date, tz) {
     if (typeof window.dateFnsTz === "undefined") {
       throw new Error("date-fns-tz is required for timezone handling");
@@ -135,95 +137,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     return window.dateFnsTz.formatInTimeZone(date, tz, "yyyy-MM-dd");
   }
 
-  /**
-   * 입력 날짜를 UTC 범위로 변환
-   */
-  function inputDateToUtcRange(dateStr, tz) {
-    if (typeof window.dateFnsTz === "undefined") {
-      throw new Error("date-fns-tz is required for timezone handling");
-    }
-
-    const startUtc = window.dateFnsTz.zonedTimeToUtc(`${dateStr}`, tz);
-    const endUtc = window.dateFnsTz.zonedTimeToUtc(`${dateStr}`, tz);
-
-    return { startUtc, endUtc };
-  }
-
-  /**
-   * 타임존 날짜 파싱
-   */
-  function parseZonedDate(dateStr, tz) {
-    if (typeof window.dateFnsTz === "undefined") {
-      throw new Error("date-fns-tz is required for timezone handling");
-    }
-    return window.dateFnsTz.utcToZonedTime(
-      window.dateFnsTz.zonedTimeToUtc(`${dateStr} 00:00:00`, tz),
-      tz
-    );
-  }
-
-  /**
-   * 날짜 포맷팅
-   */
-  function formatDateTZ(date, tz, pattern = "yyyy-MM-dd HH:mm") {
-    if (typeof window.dateFnsTz === "undefined") {
-      throw new Error("date-fns-tz is required for timezone handling");
-    }
-    return window.dateFnsTz.formatInTimeZone(date, tz, pattern);
-  }
-
-  /**
-   * 날짜 키 생성
-   */
-  function getDateKey(date, view) {
-    switch (view) {
-      case "hourly":
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}-${String(date.getDate()).padStart(2, "0")} ${String(
-          date.getHours()
-        ).padStart(2, "0")}:00`;
-      case "weekly":
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        return `${weekStart.getFullYear()}-${String(
-          weekStart.getMonth() + 1
-        ).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-      default: // daily
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}-${String(date.getDate()).padStart(2, "0")}`;
-    }
-  }
-
-  /**
-   * 날짜 라벨 포맷팅
-   */
+  /** TZ에 맞춘 라벨 포맷 */
   function formatDateLabel(date, view) {
     try {
-      if (!date || isNaN(date.getTime())) {
-        console.warn("Invalid date in formatDateLabel:", date);
-        return "Invalid Date";
-      }
-
+      if (!date || isNaN(date.getTime())) return "Invalid Date";
       const options = { timeZone: currentTimezone };
-
       switch (view) {
         case "hourly":
           return `${date.toLocaleDateString(currentLocale, options)} ${String(
             date.getHours()
           ).padStart(2, "0")}:00`;
         case "weekly":
+          // 주 시작일 라벨
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           return weekStart.toLocaleDateString(currentLocale, options);
-        default: // daily
+        default:
           return date.toLocaleDateString(currentLocale, options);
       }
-    } catch (error) {
-      console.error("Error in formatDateLabel:", error, date, view);
+    } catch (e) {
+      console.error("Error in formatDateLabel:", e, date, view);
       return "Invalid Date";
     }
   }
@@ -232,126 +165,75 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 데이터 로딩 및 필터링
   // =========================================================================
 
-  /**
-   * 탭 로그 데이터 로드 - 팝업과 동일한 방식
-   */
+  /** 탭 로그 데이터 로드 */
   async function loadData() {
     try {
-      // Chrome Extension 컨텍스트인지 확인
       if (
         typeof chrome !== "undefined" &&
         chrome.storage &&
         chrome.runtime &&
         chrome.runtime.id
       ) {
-        console.log("Running in Chrome Extension context");
-        console.log("Chrome runtime ID:", chrome.runtime.id);
-        console.log("Chrome storage available:", !!chrome.storage.local);
-        console.log("Reading from chrome.storage.local...");
         const result = await chrome.storage.local.get([
           "tabLogs",
           "isTabTrackerEnabled",
           "dailyStats",
         ]);
-        console.log("Storage read result:", result);
-
         allTabLogs = result.tabLogs || [];
         isTabTrackerEnabled = result.isTabTrackerEnabled || false;
 
-        console.log(`Loaded ${allTabLogs.length} tab logs`);
-        console.log(`Tab tracker enabled: ${isTabTrackerEnabled}`);
-
-        // 데이터 구조 확인
-        if (allTabLogs.length > 0) {
-          console.log("Sample tab log:", allTabLogs[0]);
-          console.log("All tab logs:", allTabLogs);
-        } else {
-          console.log("No tab logs found in storage");
-          console.log("Storage result:", result);
-        }
-
-        // 탭 추적이 비활성화된 경우 경고
-        if (!isTabTrackerEnabled) {
-          console.warn(
-            "Tab tracker is disabled. No new data will be collected."
-          );
-        }
-
-        // dailyStats에서 titles 타입 정규화 (팝업과 동일)
+        // dailyStats titles 정규화(참조용)
         if (result.dailyStats) {
           Object.keys(result.dailyStats).forEach(dayKey => {
             Object.keys(result.dailyStats[dayKey]).forEach(domain => {
               const bucket = result.dailyStats[dayKey][domain];
               if (bucket.titles && !Array.isArray(bucket.titles)) {
-                if (bucket.titles instanceof Set) {
+                if (bucket.titles instanceof Set)
                   bucket.titles = Array.from(bucket.titles);
-                } else if (typeof bucket.titles === "string") {
+                else if (typeof bucket.titles === "string")
                   bucket.titles = [bucket.titles];
-                } else {
-                  bucket.titles = [];
-                }
+                else bucket.titles = [];
               }
             });
           });
         }
       } else {
-        console.error("Not running in Chrome Extension context!");
-        console.error("Please open this page from the extension popup.");
-
-        // 사용자에게 안내 메시지 표시
+        // 확장 외부 접근 가드
         document.body.innerHTML = `
           <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-          ">
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            height:100vh;font-family:Arial,sans-serif;text-align:center;padding:20px;
+            background:linear-gradient(135deg,#667eea 0%, #764ba2 100%);color:white;">
             <h1>🚫 접근 제한</h1>
             <p>이 페이지는 Chrome Extension에서만 접근할 수 있습니다.</p>
             <p>확장 프로그램 팝업에서 "상세보기" 버튼을 클릭해주세요.</p>
-            <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
-              <p><strong>해결 방법:</strong></p>
-              <ol style="text-align: left; display: inline-block;">
-                <li>Chrome 확장 프로그램 아이콘을 클릭</li>
-                <li>TabbyMansion 팝업에서 "상세보기" 버튼 클릭</li>
-                <li>새 탭에서 상세 통계 페이지가 열립니다</li>
-              </ol>
-            </div>
-          </div>
-        `;
+          </div>`;
         return;
       }
     } catch (error) {
       console.error("Error loading data:", error);
       allTabLogs = [];
+    } finally {
+      // 로드 후 정렬/인덱스 캐시 무효화
+      invalidateLogsSortedCache();
     }
   }
 
-  /**
-   * 데이터 필터링 - 시간순 정렬 포함
-   */
+  /** 데이터 필터링 - 시간순 정렬 포함 */
   function filterData() {
-    // 범위 필터링
     if (!currentFilters.startDate || !currentFilters.endDate) {
       filteredData = allTabLogs.slice();
     } else {
       filteredData = allTabLogs.filter(record => {
-        const timestamp = new Date(record.timestamp);
+        const ts = new Date(record.timestamp);
         return (
-          timestamp >= currentFilters.startDate &&
-          timestamp <= currentFilters.endDate &&
+          ts >= currentFilters.startDate &&
+          ts <= currentFilters.endDate &&
           (!currentFilters.site || record.domain === currentFilters.site)
         );
       });
     }
-
-    // 중복 제거: 동일 시각(ms) + 동일 탭ID + 동일 URL 은 하나로 간주
+    // 중복 제거
     const seen = new Set();
     const deduped = [];
     for (const rec of filteredData) {
@@ -363,60 +245,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     filteredData = deduped;
 
-    // 시간순 정렬 (중요)
+    // 시간순 정렬(오름차순)
     filteredData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    console.log(
-      `Filtered ${filteredData.length} records from ${allTabLogs.length} total`
-    );
   }
 
   // =========================================================================
   // 시간 계산 유틸리티들
   // =========================================================================
 
-  /**
-   * 시간 추정값을 항상 0 이상 & 유한값으로 보정
-   */
+  /** 추정 초(가드 포함) */
   function getEstimatedTimeInSeconds(log, index = 0, logs = []) {
     const timeMs = getEstimatedTime(log, index, logs);
     const sec = Math.round(timeMs / 1000);
     return Number.isFinite(sec) ? Math.max(0, sec) : 0;
   }
 
-  /**
-   * getEstimatedTime도 NaN/음수 가드
-   */
+  /** 추정 ms(동일 탭/전역 next, endTime, actualTime 고려) */
   function getEstimatedTime(log, index = 0, logs = []) {
-    const averageTabTime = 30000; // 30초
-
+    const AVERAGE = 30000; // 30s
     if (log.actualTime && log.actualTime > 0) return log.actualTime;
 
-    const cur = new Date(log.timestamp);
-    const curMs = cur.getTime();
-    if (!Number.isFinite(curMs)) return averageTabTime;
+    const curMs = new Date(log.timestamp).getTime();
+    if (!Number.isFinite(curMs)) return AVERAGE;
 
     if (index < logs.length - 1) {
       const nxt = new Date(logs[index + 1]?.timestamp);
-      const diff = nxt - cur;
-      if (Number.isFinite(diff) && diff > 0 && diff < 10800000) return diff; // 3시간 제한
+      const diff = nxt - curMs;
+      if (Number.isFinite(diff) && diff > 0 && diff < 10800000) return diff;
     } else {
-      // 마지막 로그인 경우, 탭 트래커 상태에 따라 처리
       if (isTabTrackerEnabled) {
-        // 활성화된 경우: 현재까지의 시간 계산
         const diff = Date.now() - curMs;
-        if (Number.isFinite(diff) && diff > 0) return Math.min(diff, 10800000); // 3시간 제한
+        if (Number.isFinite(diff) && diff > 0) return Math.min(diff, 10800000);
       } else {
-        // 비활성화된 경우: 기본값 사용 (시간 증가 방지)
-        return averageTabTime;
+        return AVERAGE;
       }
     }
-    return averageTabTime;
+    return AVERAGE;
   }
 
-  // ===== 정확한 기간 클리핑을 위한 헬퍼들 =====
+  // ===== 정확한 기간 클리핑을 위한 인덱스/캐시 =====
   let allLogsSortedCache = null;
   let allLogsSortedTimestamps = null;
+  let byTabIndex = null; // tabId -> [timestamps(sorted asc)]
 
   function ensureAllLogsSorted() {
     if (!allLogsSortedCache) {
@@ -426,21 +296,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       allLogsSortedTimestamps = allLogsSortedCache.map(l =>
         new Date(l.timestamp).getTime()
       );
+      // 탭별 타임스탬프 인덱스 구축
+      byTabIndex = new Map();
+      for (const l of allLogsSortedCache) {
+        if (!l.tabId) continue;
+        const t = new Date(l.timestamp).getTime();
+        const arr = byTabIndex.get(l.tabId) || [];
+        arr.push(t);
+        byTabIndex.set(l.tabId, arr);
+      }
     }
   }
 
   function invalidateLogsSortedCache() {
     allLogsSortedCache = null;
     allLogsSortedTimestamps = null;
+    byTabIndex = null;
   }
-
-  // loadData 이후 캐시 무효화
-  const _origLoadData = loadData;
-  loadData = async function patchedLoadData() {
-    const res = await _origLoadData();
-    invalidateLogsSortedCache();
-    return res;
-  };
 
   function upperBound(arr, target) {
     let lo = 0,
@@ -450,37 +322,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (arr[mid] <= target) lo = mid + 1;
       else hi = mid;
     }
-    return lo; // first index with value > target
+    return lo;
   }
 
   function getNextTimestampMs(currentMs) {
     ensureAllLogsSorted();
-    if (!allLogsSortedTimestamps || allLogsSortedTimestamps.length === 0)
-      return null;
+    if (!allLogsSortedTimestamps?.length) return null;
     const idx = upperBound(allLogsSortedTimestamps, currentMs);
     return idx < allLogsSortedTimestamps.length
       ? allLogsSortedTimestamps[idx]
       : null;
   }
 
-  // 같은 탭의 다음 이벤트 시각(ms) 탐색 (없으면 null)
+  // 같은 탭의 다음 이벤트 시각(ms)
   function getNextTimestampSameTabMs(currentLog) {
     try {
+      ensureAllLogsSorted();
       const curMs = new Date(currentLog.timestamp).getTime();
-      const tabId = currentLog.tabId;
-      if (!tabId) return null;
-      // 시간순으로 한 번만 순회 (데이터 수가 수백~수천 기준 충분히 빠름)
-      let nextMs = null;
-      for (let i = 0; i < allTabLogs.length; i++) {
-        const rec = allTabLogs[i];
-        if (rec.tabId !== tabId) continue;
-        const ts = new Date(rec.timestamp).getTime();
-        if (ts > curMs) {
-          nextMs = ts;
-          break;
-        }
-      }
-      return nextMs;
+      const arr = currentLog.tabId ? byTabIndex?.get(currentLog.tabId) : null;
+      if (!arr || !arr.length) return null;
+      const idx = upperBound(arr, curMs);
+      return idx < arr.length ? arr[idx] : null;
     } catch {
       return null;
     }
@@ -498,31 +360,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     )
       return 0;
 
-    // 기본 timespan 계산 (global next 또는 actualTime 사용)
+    // 끝시각 계산
     let spanMs = 0;
-    // 1) 명시 끝시간 우선
     if (log.endTime) {
       const end = new Date(log.endTime).getTime();
       if (Number.isFinite(end) && end > curMs) spanMs = end - curMs;
     } else if (log.actualTime && log.actualTime > 0) {
       spanMs = log.actualTime;
     } else {
-      // 2) 같은 탭의 다음 이벤트 시각
-      let nextMs = getNextTimestampSameTabMs(log);
-      if (!nextMs) {
-        // 3) 동일 탭이 없으면 전역 다음 이벤트로 보수
-        nextMs = getNextTimestampMs(curMs);
-      }
+      let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(curMs);
       if (nextMs) {
         const diff = nextMs - curMs;
         if (Number.isFinite(diff) && diff > 0 && diff < 10800000) spanMs = diff;
       }
       if (spanMs === 0) {
-        if (isTabTrackerEnabled) {
-          spanMs = Math.min(Math.max(0, Date.now() - curMs), 10800000);
-        } else {
-          spanMs = 30000; // 기본값
-        }
+        spanMs = isTabTrackerEnabled
+          ? Math.min(Math.max(0, Date.now() - curMs), 10800000)
+          : 30000;
       }
     }
 
@@ -532,7 +386,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Math.round(clipped / 1000);
   }
 
-  // 로그들을 구간으로 변환 후 합집합 길이(초) 계산
+  // 로그 -> 구간 합집합(초)
   function getUnionTimeSeconds(rangeStart, rangeEnd, records) {
     const startMs = new Date(rangeStart).getTime();
     const endMs = new Date(rangeEnd).getTime();
@@ -548,7 +402,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const sMs = new Date(log.timestamp).getTime();
       if (!Number.isFinite(sMs)) continue;
 
-      // 끝시각 계산 (endTime > actualTime > same-tab next > 전역 next > fallback)
       let eMs = null;
       if (log.endTime) {
         const t = new Date(log.endTime).getTime();
@@ -560,26 +413,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
         if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
       }
-      if (!eMs) {
+      if (!eMs)
         eMs = isTabTrackerEnabled
           ? Math.min(sMs + 10800000, Date.now())
           : sMs + 30000;
-      }
 
       const a = Math.max(sMs, startMs);
       const b = Math.min(eMs, endMs);
       if (b > a) intervals.push([a, b]);
     }
 
-    if (intervals.length === 0) return 0;
+    if (!intervals.length) return 0;
     intervals.sort((x, y) => x[0] - y[0]);
     let [curS, curE] = intervals[0];
     let total = 0;
     for (let i = 1; i < intervals.length; i++) {
       const [s, e] = intervals[i];
-      if (s <= curE) {
-        curE = Math.max(curE, e);
-      } else {
+      if (s <= curE) curE = Math.max(curE, e);
+      else {
         total += curE - curS;
         curS = s;
         curE = e;
@@ -592,48 +443,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   // 페이지 초기화
   // =========================================================================
-
-  /**
-   * 페이지 초기화
-   */
   async function initializePage() {
-    console.log("Initializing page...");
-    console.log("date-fns available:", typeof window.dateFns !== "undefined");
-    console.log(
-      "date-fns-tz available:",
-      typeof window.dateFnsTz !== "undefined"
-    );
-
-    // date-fns-tz 필수 확인
     if (typeof window.dateFnsTz === "undefined") {
-      console.error(
-        "date-fns-tz is not loaded! Please check UMD bundle links."
-      );
       alert(
         "타임존 처리 라이브러리가 로드되지 않았습니다. 페이지를 새로고침해주세요."
       );
       return;
     }
 
-    // 사용자 타임존 및 언어 감지
     currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     currentLocale = navigator.language || "ko-KR";
-
-    console.log("Current timezone:", currentTimezone);
-    console.log("Current locale:", currentLocale);
-
-    // 타임존 선택기 업데이트
     updateTimezoneSelector();
 
-    // 기본 날짜 설정 - 오늘 하루로 설정
+    // 기본: 오늘 하루
     const today = new Date();
-
     startDateEl.value = formatDateForInputTZ(today, currentTimezone);
     endDateEl.value = formatDateForInputTZ(today, currentTimezone);
     if (startTimeEl) startTimeEl.value = "00:00";
     if (endTimeEl) endTimeEl.value = "23:59";
 
-    // 초기 필터 설정
+    // 초기 필터
     try {
       const startIso = `${startDateEl.value} ${
         startTimeEl?.value || "00:00"
@@ -647,163 +476,79 @@ document.addEventListener("DOMContentLoaded", async () => {
         endIso,
         currentTimezone
       );
-    } catch (error) {
-      console.error("Error setting initial filters:", error);
+    } catch {
       currentFilters.startDate = new Date(`${startDateEl.value}T00:00:00`);
       currentFilters.endDate = new Date(`${endDateEl.value}T23:59:59`);
     }
 
-    // 데이터 로드
     await loadData();
-
-    // 탭 트래커 비활성화 경고 표시
-    if (!isTabTrackerEnabled) {
-      showTabTrackerWarning();
-    }
-
-    // 오늘 날짜 표시
+    if (!isTabTrackerEnabled) showTabTrackerWarning();
     updateStatsTodayDate();
-
-    // 초기 통계 표시
     updateAllStats();
   }
 
-  /**
-   * 탭 트래커 비활성화 경고 표시
-   */
   function showTabTrackerWarning() {
-    const warningHtml = `
+    const html = `
       <div id="tab-tracker-warning" style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        z-index: 1000;
-        max-width: 300px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        animation: slideIn 0.3s ease-out;
-      ">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 20px;">⚠️</span>
-          <div>
-            <div style="font-weight: bold; margin-bottom: 5px;">탭 트래커 비활성화</div>
-            <div style="font-size: 14px; opacity: 0.9;">
-              정확한 사용시간 측정을 위해 탭 트래커를 활성화해주세요.
-            </div>
-          </div>
+        position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);
+        color:#fff;padding:15px 20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);
+        z-index:1000;max-width:300px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;animation:slideIn .3s ease-out;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:20px;">⚠️</span>
+          <div><div style="font-weight:bold;margin-bottom:5px;">탭 트래커 비활성화</div>
+          <div style="font-size:14px;opacity:.9;">정확한 사용시간 측정을 위해 탭 트래커를 활성화해주세요.</div></div>
         </div>
         <button onclick="closeTabTrackerWarning()" style="
-          position: absolute;
-          top: 5px;
-          right: 5px;
-          background: none;
-          border: none;
-          color: white;
-          font-size: 18px;
-          cursor: pointer;
-          padding: 0;
-          width: 20px;
-          height: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        ">×</button>
+          position:absolute;top:5px;right:5px;background:none;border:none;color:white;
+          font-size:18px;cursor:pointer;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">×</button>
       </div>
-      <style>
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      </style>
+      <style>@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}</style>
     `;
-
-    document.body.insertAdjacentHTML("beforeend", warningHtml);
-
-    // 10초 후 자동으로 사라지게 설정
+    document.body.insertAdjacentHTML("beforeend", html);
     setTimeout(() => {
-      const warning = document.getElementById("tab-tracker-warning");
-      if (warning) {
-        warning.style.animation = "slideIn 0.3s ease-out reverse";
-        setTimeout(() => warning.remove(), 300);
+      const w = document.getElementById("tab-tracker-warning");
+      if (w) {
+        w.style.animation = "slideIn .3s ease-out reverse";
+        setTimeout(() => w.remove(), 300);
       }
     }, 10000);
   }
-
-  /**
-   * 탭 트래커 경고 닫기 (전역 함수로 등록)
-   */
   window.closeTabTrackerWarning = function () {
-    const warning = document.getElementById("tab-tracker-warning");
-    if (warning) {
-      warning.style.animation = "slideIn 0.3s ease-out reverse";
-      setTimeout(() => warning.remove(), 300);
+    const w = document.getElementById("tab-tracker-warning");
+    if (w) {
+      w.style.animation = "slideIn .3s ease-out reverse";
+      setTimeout(() => w.remove(), 300);
     }
   };
 
-  /**
-   * 상세페이지 오늘 날짜 표시
-   */
   function updateStatsTodayDate() {
-    const todayDateEl = document.getElementById("stats-today-date");
-    if (todayDateEl) {
-      const today = new Date();
+    const el = document.getElementById("stats-today-date");
+    if (el) {
       const options = {
         year: "numeric",
         month: "long",
         day: "numeric",
         weekday: "long",
       };
-      const dateString = today.toLocaleDateString("ko-KR", options);
-      todayDateEl.textContent = `📅 ${dateString}`;
+      el.textContent = `📅 ${new Date().toLocaleDateString("ko-KR", options)}`;
     }
   }
 
-  /**
-   * 모든 통계 업데이트
-   */
   async function updateAllStats() {
-    console.log("Updating all stats...");
-
-    // 시간 범위 표시 업데이트
     updateTimeRangeDisplay();
-
-    // 필터 적용
     filterData();
-
-    // 디버그: 범위 내 합산 검증 로그 (필요시 주석 처리 가능)
-    if (false) {
-      console.group("Clipped sum debug");
-      filteredData.slice(0, 50).forEach(r => {
-        const s = getTimeInRangeSeconds(
-          r,
-          currentFilters.startDate,
-          currentFilters.endDate
-        );
-        console.log(r.timestamp, r.domain, s);
-      });
-      console.groupEnd();
-    }
-
-    // 결과 표시
     await displayResults();
   }
 
-  /**
-   * 타임존 선택기 업데이트
-   */
   function updateTimezoneSelector() {
-    const currentOption = Array.from(timezoneSelectEl.options).find(
-      opt => opt.value === currentTimezone
+    const opt = Array.from(timezoneSelectEl.options).find(
+      o => o.value === currentTimezone
     );
-    if (!currentOption) {
-      const option = document.createElement("option");
-      option.value = currentTimezone;
-      option.textContent = `🌍 ${currentTimezone}`;
-      timezoneSelectEl.appendChild(option);
+    if (!opt) {
+      const o = document.createElement("option");
+      o.value = currentTimezone;
+      o.textContent = `🌍 ${currentTimezone}`;
+      timezoneSelectEl.appendChild(o);
     }
     timezoneSelectEl.value = currentTimezone;
   }
@@ -811,105 +556,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   // 이벤트 핸들러들
   // =========================================================================
-
-  /**
-   * 이벤트 리스너 등록
-   */
   function setupEventListeners() {
-    // 필터 적용
-    if (applyFilterBtn) {
-      applyFilterBtn.addEventListener("click", async () => {
-        await applyFilters();
-      });
-    }
+    applyFilterBtn?.addEventListener("click", refreshData);
+    resetFilterBtn?.addEventListener("click", resetFilters);
+    refreshDataBtn?.addEventListener("click", refreshData);
+    exportDataBtn?.addEventListener("click", exportData);
 
-    // 필터 초기화
-    if (resetFilterBtn) {
-      resetFilterBtn.addEventListener("click", async () => {
-        await resetFilters();
-      });
-    }
+    viewDailyBtn?.addEventListener("click", () => setView("daily"));
+    viewHourlyBtn?.addEventListener("click", () => setView("hourly"));
+    viewWeeklyBtn?.addEventListener("click", () => setView("weekly"));
 
-    // 새로고침
-    if (refreshDataBtn) {
-      refreshDataBtn.addEventListener("click", async () => {
-        await refreshData();
-      });
-    }
+    timezoneSelectEl?.addEventListener("change", async () => {
+      currentTimezone = timezoneSelectEl.value;
+      await applyFilters();
+    });
 
-    // 데이터 내보내기
-    if (exportDataBtn) {
-      exportDataBtn.addEventListener("click", () => {
-        exportData();
-      });
-    }
+    siteFilterEl?.addEventListener("change", async () => {
+      currentFilters.site = siteFilterEl.value;
+      await applyFilters();
+    });
 
-    // 분석 단위 변경
-    if (viewDailyBtn) {
-      viewDailyBtn.addEventListener("click", () => setView("daily"));
-    }
-    if (viewHourlyBtn) {
-      viewHourlyBtn.addEventListener("click", () => setView("hourly"));
-    }
-    if (viewWeeklyBtn) {
-      viewWeeklyBtn.addEventListener("click", () => setView("weekly"));
-    }
+    startDateEl?.addEventListener("change", updateTimeRangeDisplay);
+    endDateEl?.addEventListener("change", updateTimeRangeDisplay);
+    startTimeEl?.addEventListener("change", updateTimeRangeDisplay);
+    endTimeEl?.addEventListener("change", updateTimeRangeDisplay);
 
-    // 타임존 변경
-    if (timezoneSelectEl) {
-      timezoneSelectEl.addEventListener("change", async () => {
-        currentTimezone = timezoneSelectEl.value;
-        await applyFilters();
-      });
-    }
+    timelineContainer?.addEventListener("click", e => {
+      const siteEntry = e.target.closest(".site-entry");
+      if (siteEntry) {
+        const url = siteEntry.getAttribute("data-url");
+        if (url) window.open(url, "_blank");
+      }
+    });
 
-    // 사이트 필터 변경
-    if (siteFilterEl) {
-      siteFilterEl.addEventListener("change", async () => {
-        currentFilters.site = siteFilterEl.value;
-        await applyFilters();
-      });
-    }
-
-    // 날짜 입력 변경
-    if (startDateEl) {
-      startDateEl.addEventListener("change", () => updateTimeRangeDisplay());
-    }
-    if (endDateEl) {
-      endDateEl.addEventListener("change", () => updateTimeRangeDisplay());
-    }
-    if (startTimeEl) {
-      startTimeEl.addEventListener("change", () => updateTimeRangeDisplay());
-    }
-    if (endTimeEl) {
-      endTimeEl.addEventListener("change", () => updateTimeRangeDisplay());
-    }
-
-    // 상세 데이터 리스트 클릭 이벤트 리스너
-    if (timelineContainer) {
-      timelineContainer.addEventListener("click", e => {
-        const siteEntry = e.target.closest(".site-entry");
-        if (siteEntry) {
-          const url = siteEntry.getAttribute("data-url");
-          if (url) {
-            window.open(url, "_blank");
-          }
-        }
-      });
-    }
+    // 기록 관리 이벤트 리스너
+    deleteDateBtn?.addEventListener("click", deleteDataByDate);
+    deleteAllBtn?.addEventListener("click", deleteAllData);
   }
 
   // =========================================================================
   // 필터 관련 함수들
   // =========================================================================
-
-  /**
-   * 필터 적용
-   */
   async function applyFilters() {
     try {
       showLoading(true);
-
       const startIso = `${startDateEl.value} ${
         startTimeEl?.value || "00:00"
       }:00`;
@@ -925,77 +615,68 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       filterData();
       await displayResults();
-    } catch (error) {
-      console.error("Error applying filters:", error);
+    } catch (e) {
+      console.error("Error applying filters:", e);
       alert("필터 적용 중 오류가 발생했습니다.");
     } finally {
       showLoading(false);
     }
   }
 
-  /**
-   * 필터 초기화
-   */
   async function resetFilters() {
     const today = new Date();
-    const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-
-    startDateEl.value = formatDateForInputTZ(weekAgo, currentTimezone);
+    startDateEl.value = formatDateForInputTZ(today, currentTimezone);
     endDateEl.value = formatDateForInputTZ(today, currentTimezone);
     if (startTimeEl) startTimeEl.value = "00:00";
     if (endTimeEl) endTimeEl.value = "23:59";
-
     siteFilterEl.value = "";
     currentFilters.site = "";
-
     timezoneSelectEl.value = currentTimezone;
+    updateTimeRangeDisplay();
     setView("daily");
-
     await applyFilters();
   }
 
-  /**
-   * 데이터 새로고침
-   */
   async function refreshData() {
     try {
-      refreshDataBtn.classList.add("loading");
-      refreshDataBtn.disabled = true;
+      // 이미지를 wink로 변경
+      const refreshBtnImage = document.getElementById("refresh-btn-image");
+      if (refreshBtnImage) {
+        refreshBtnImage.src = "public/images/wink.png";
+      }
 
+      refreshDataBtn.disabled = true;
       await loadData();
       await applyFilters();
-    } catch (error) {
-      console.error("Error refreshing data:", error);
+    } catch (e) {
+      console.error("Error refreshing data:", e);
       alert("데이터 새로고침 중 오류가 발생했습니다.");
     } finally {
-      refreshDataBtn.classList.remove("loading");
       refreshDataBtn.disabled = false;
+
+      // 1초 후 이미지를 normal로 변경
+      setTimeout(() => {
+        const refreshBtnImage = document.getElementById("refresh-btn-image");
+        if (refreshBtnImage) {
+          refreshBtnImage.src = "public/images/normal.png";
+        }
+      }, 1000);
     }
   }
 
   // =========================================================================
-  // 뷰 관련 함수들
+  // 뷰 관련
   // =========================================================================
-
-  /**
-   * 뷰 설정
-   */
   function setView(view) {
     currentView = view;
     updateViewButtons();
-
-    if (queryDebounceTimer) {
-      clearTimeout(queryDebounceTimer);
-    }
+    if (queryDebounceTimer) clearTimeout(queryDebounceTimer);
     queryDebounceTimer = setTimeout(() => {
       updateCharts();
       updateTimeList();
     }, 300);
   }
 
-  /**
-   * 뷰 버튼 업데이트
-   */
   function updateViewButtons() {
     viewDailyBtn.classList.toggle("active", currentView === "daily");
     viewHourlyBtn.classList.toggle("active", currentView === "hourly");
@@ -1003,37 +684,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================================================================
-  // 결과 표시 함수들
+  // 결과 표시
   // =========================================================================
-
-  /**
-   * 결과 표시
-   */
   async function displayResults() {
-    console.log("Displaying results...");
-    console.log("Filtered data length:", filteredData.length);
-    console.log("All tab logs length:", allTabLogs.length);
-
     if (filteredData.length === 0) {
-      console.log("No filtered data, showing no data message");
       showNoData();
       return;
     }
 
-    // 중복 제거: 구간 합집합으로 총 사용 시간 계산
     const totalSeconds = getUnionTimeSeconds(
       currentFilters.startDate,
       currentFilters.endDate,
       filteredData
     );
-    // 상한: 선택한 범위 길이를 넘지 않도록 가드 (클리핑된 합이 예기치 않게 커지는 경우 방지)
     const rangeSeconds = Math.max(
       0,
       Math.round((currentFilters.endDate - currentFilters.startDate) / 1000)
     );
     const safeTotalSeconds = Math.min(totalSeconds, rangeSeconds);
 
-    const uniqueSites = new Set(filteredData.map(record => record.domain)).size;
+    const uniqueSites = new Set(filteredData.map(r => r.domain)).size;
     const totalSessions = filteredData.length;
     const openWindows = await getOpenWindowsCount();
     const openTabs = await getOpenTabsCount();
@@ -1054,7 +724,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       "yyyy년 MM월 dd일"
     );
 
-    // 오늘 하루인 경우 특별한 표시
     const today = new Date();
     const isToday =
       startStr === endStr &&
@@ -1064,11 +733,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         "yyyy년 MM월 dd일"
       ) === startStr;
 
-    if (isToday) {
-      resultsPeriod.textContent = `${startStr} (오늘)`;
-    } else {
-      resultsPeriod.textContent = `${startStr} ~ ${endStr}`;
-    }
+    resultsPeriod.textContent = isToday
+      ? `${startStr} (오늘)`
+      : `${startStr} ~ ${endStr}`;
 
     updateCharts();
     updateTimeList();
@@ -1079,12 +746,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     resultsSection.classList.add("show");
   }
 
-  /**
-   * 데이터 없음 표시
-   */
   function showNoData() {
+    // 차트 정리
+    if (timeChart) {
+      timeChart.destroy();
+      timeChart = null;
+    }
+    if (distributionChart) {
+      distributionChart.destroy();
+      distributionChart = null;
+    }
     resultsSection.style.display = "none";
-
     const noDataHtml = `
       <div class="no-data">
         <div class="no-data-icon">📊</div>
@@ -1093,22 +765,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           선택한 기간에 탭 활동 데이터가 없습니다.<br>
           다른 기간을 선택하거나 탭 추적을 활성화해주세요.
         </div>
-      </div>
-    `;
-
+      </div>`;
     timelineContainer.innerHTML = noDataHtml;
+    timeListContainer.innerHTML = noDataHtml;
+    const siteList = document.getElementById("site-list");
+    if (siteList) siteList.innerHTML = "";
   }
 
   // =========================================================================
-  // 기타 유틸리티 함수들
+  // 기타 유틸
   // =========================================================================
-
-  /**
-   * 시간 범위 표시 업데이트
-   */
   function updateTimeRangeDisplay() {
     if (!timeRangeDisplayEl) return;
-
     const startStr = window.dateFnsTz.formatInTimeZone(
       new Date(`${startDateEl.value}T${startTimeEl?.value || "00:00"}:00`),
       currentTimezone,
@@ -1119,25 +787,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentTimezone,
       "yyyy년 MM월 dd일 HH:mm"
     );
-
     timeRangeDisplayEl.textContent = `${startStr} ~ ${endStr}`;
   }
 
-  /**
-   * 로딩 상태 표시
-   */
   function showLoading(show) {
-    const loadingElements = document.querySelectorAll(".loading-overlay");
-    loadingElements.forEach(el => {
+    document.querySelectorAll(".loading-overlay").forEach(el => {
       el.style.display = show ? "flex" : "none";
     });
   }
 
-  /**
-   * 데이터 내보내기
-   */
   function exportData() {
-    const exportData = {
+    const exportPayload = {
       filters: {
         startDate: startDateEl.value,
         endDate: endDateEl.value,
@@ -1148,8 +808,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       data: filteredData,
       exportDate: new Date().toISOString(),
     };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -1165,47 +824,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================================================================
-  // 차트 관련 함수들
+  // 차트
   // =========================================================================
-
-  /**
-   * 차트 업데이트
-   */
   function updateCharts() {
-    console.log("Updating charts...");
-    console.log("Filtered data length:", filteredData.length);
-    console.log("Current view:", currentView);
-
     if (filteredData.length === 0) {
-      console.log("No filtered data, showing no data message");
       showNoData();
       return;
     }
-
-    console.log("Updating time chart...");
     updateTimeChart();
-    console.log("Updating distribution chart...");
     updateDistributionChart();
-    console.log("Charts update completed");
   }
 
-  /**
-   * 시간 추이 차트 업데이트
-   */
   function updateTimeChart() {
-    console.log("updateTimeChart called");
-    if (!timeChartEl) {
-      console.log("timeChartEl not found");
-      return;
-    }
+    if (!timeChartEl) return;
+    if (timeChart) timeChart.destroy();
 
-    // 기존 차트 제거
-    if (timeChart) {
-      console.log("Destroying existing time chart");
-      timeChart.destroy();
-    }
-
-    // 데이터 집계
     let aggregatedData;
     switch (currentView) {
       case "hourly":
@@ -1229,51 +862,28 @@ document.addEventListener("DOMContentLoaded", async () => {
           filteredData
         );
     }
-
-    console.log("Aggregated data:", aggregatedData);
-    console.log("Aggregated data length:", aggregatedData.length);
-
-    if (aggregatedData.length === 0) {
-      console.log("No aggregated data, showing no data");
+    if (!aggregatedData.length) {
       showNoData();
       return;
     }
 
-    // 차트 데이터 준비
-    const labels = aggregatedData.map(item => {
-      try {
-        // item.date는 이미 날짜 문자열이므로 직접 파싱
-        const date = new Date(item.date);
-        if (isNaN(date.getTime())) {
-          console.warn("Invalid date:", item.date);
-          return "Invalid Date";
-        }
-        return formatDateLabel(date, currentView);
-      } catch (error) {
-        console.error("Error formatting date label:", error, item.date);
-        return "Invalid Date";
-      }
-    });
-    const data = aggregatedData.map(item => item.totalSeconds / 60); // 분 단위로 변환
-
-    console.log("Chart labels:", labels);
-    console.log("Chart data:", data);
-
-    // 차트 타입 결정 (데이터가 2개 이하면 막대 차트)
-    const chartType = data.filter(d => d > 0).length <= 2 ? "bar" : "line";
-    console.log("Chart type:", chartType);
+    // 라벨은 dateMs(UTC epoch)로 안전 생성
+    const labels = aggregatedData.map(item =>
+      formatDateLabel(new Date(item.dateMs), currentView)
+    );
+    const minutes = aggregatedData.map(item => item.totalSeconds / 60);
+    const maxVal = Math.max(0, ...minutes);
+    const chartType = minutes.filter(d => d > 0).length <= 2 ? "bar" : "line";
 
     const ctx = timeChartEl.getContext("2d");
-    console.log("Canvas context obtained");
-
     timeChart = new Chart(ctx, {
       type: chartType,
       data: {
-        labels: labels,
+        labels,
         datasets: [
           {
             label: "사용 시간 (분)",
-            data: data,
+            data: minutes,
             borderColor: "rgba(255, 215, 0, 1)",
             backgroundColor:
               chartType === "bar"
@@ -1294,19 +904,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: false,
-          },
+          legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            backgroundColor: "rgba(0,0,0,0.8)",
             titleColor: "#fff",
             bodyColor: "#fff",
             callbacks: {
-              label: function (context) {
-                const minutes = context.parsed.y;
-                const hours = Math.floor(minutes / 60);
-                const mins = Math.round(minutes % 60);
-                return `${hours}시간 ${mins}분`;
+              label(ctx) {
+                const m = ctx.parsed.y || 0;
+                const h = Math.floor(m / 60);
+                const mm = Math.round(m % 60);
+                return `${h}시간 ${mm}분`;
               },
             },
           },
@@ -1314,392 +922,600 @@ document.addEventListener("DOMContentLoaded", async () => {
         scales: {
           y: {
             beginAtZero: true,
-            grid: {
-              color: "rgba(255, 255, 255, 0.1)",
-            },
+            suggestedMax: maxVal === 0 ? 1 : undefined,
+            grid: { color: "rgba(255,255,255,0.1)" },
             ticks: {
-              color: "rgba(255, 255, 255, 0.8)",
-              callback: function (value) {
-                const minutes = value;
-                const hours = Math.floor(minutes / 60);
-                const mins = Math.round(minutes % 60);
-                return hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`;
-              },
-              // 중복 라벨 방지
+              color: "rgba(255,255,255,0.8)",
               maxTicksLimit: 8,
-              // 최소 간격 설정
-              stepSize: Math.max(1, Math.ceil(Math.max(...data) / 8)),
+              ...(maxVal > 0
+                ? { stepSize: Math.max(1, Math.ceil(maxVal / 8)) }
+                : {}),
+              callback(value) {
+                const m = value;
+                const h = Math.floor(m / 60);
+                const mm = Math.round(m % 60);
+                return h > 0 ? `${h}시간 ${mm}분` : `${mm}분`;
+              },
             },
           },
           x: {
-            grid: {
-              color: "rgba(255, 255, 255, 0.1)",
-            },
-            ticks: {
-              color: "rgba(255, 255, 255, 0.8)",
-              maxRotation: 45,
-            },
+            grid: { color: "rgba(255,255,255,0.1)" },
+            ticks: { color: "rgba(255,255,255,0.8)", maxRotation: 45 },
           },
         },
       },
     });
   }
 
-  /**
-   * 분포 차트 업데이트
-   */
   function updateDistributionChart() {
     if (!distributionChartEl) return;
+    if (distributionChart) distributionChart.destroy();
 
-    // 기존 차트 제거
-    if (distributionChart) {
-      distributionChart.destroy();
-    }
-
-    // 사이트별 사용 시간 집계
-    const siteUsage = new Map();
-    filteredData.forEach((record, index, arr) => {
-      const domain = record.domain || "unknown";
-      const timeSpent = getEstimatedTimeInSeconds(record, index, arr);
-      siteUsage.set(domain, (siteUsage.get(domain) || 0) + timeSpent);
-    });
-
-    // 상위 6개 사이트 + 기타
-    const sortedSites = Array.from(siteUsage.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6);
-
-    const totalSeconds = sortedSites.reduce(
-      (sum, [_, seconds]) => sum + (Number.isFinite(seconds) ? seconds : 0),
-      0
+    // 전체 중복 제거된 사용 시간 계산
+    const totalUnionSeconds = getUnionTimeSeconds(
+      currentFilters.startDate,
+      currentFilters.endDate,
+      filteredData
     );
-    const otherSeconds =
-      Array.from(siteUsage.values()).reduce(
-        (sum, seconds) => sum + (Number.isFinite(seconds) ? seconds : 0),
-        0
-      ) - totalSeconds;
 
-    const labels = sortedSites.map(([domain, _]) => domain);
-    const data = sortedSites.map(([_, seconds]) => seconds / 60); // 분 단위
-
-    if (otherSeconds > 0) {
-      labels.push("기타");
-      data.push(otherSeconds / 60);
+    if (totalUnionSeconds === 0) {
+      return;
     }
 
-    const colors = [
-      "#FF6B6B",
-      "#4ECDC4",
-      "#45B7D1",
-      "#96CEB4",
-      "#FFEAA7",
-      "#DDA0DD",
-      "#98D8C8",
-      "#F7DC6F",
-      "#BB8FCE",
-      "#85C1E9",
-      "#F8C471",
-      "#82E0AA",
-    ];
+    // 전체 사용 시간 구간 계산
+    const intervals = [];
+    for (const log of filteredData) {
+      const sMs = new Date(log.timestamp).getTime();
+      if (!Number.isFinite(sMs)) continue;
 
-    const ctx = distributionChartEl.getContext("2d");
-    distributionChart = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            data: data,
-            backgroundColor: colors.slice(0, labels.length),
-            borderWidth: 2,
-            borderColor: "rgba(255, 255, 255, 0.2)",
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "60%",
-        plugins: {
-          legend: {
-            display: false,
-          },
-          tooltip: {
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            titleColor: "#fff",
-            bodyColor: "#fff",
-            callbacks: {
-              label: function (context) {
-                const minutes = context.parsed;
-                const hours = Math.floor(minutes / 60);
-                const mins = Math.round(minutes % 60);
-                const percentage = (
-                  (minutes / data.reduce((a, b) => a + b, 0)) *
-                  100
-                ).toFixed(1);
-                return `${context.label}: ${hours}시간 ${mins}분 (${percentage}%)`;
+      let eMs = null;
+      if (log.endTime) {
+        const t = new Date(log.endTime).getTime();
+        if (Number.isFinite(t) && t > sMs) eMs = t;
+      }
+      if (!eMs && log.actualTime && log.actualTime > 0)
+        eMs = sMs + log.actualTime;
+      if (!eMs) {
+        let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
+        if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
+      }
+      if (!eMs)
+        eMs = isTabTrackerEnabled
+          ? Math.min(sMs + 10800000, Date.now())
+          : sMs + 30000;
+
+      const a = Math.max(sMs, new Date(currentFilters.startDate).getTime());
+      const b = Math.min(eMs, new Date(currentFilters.endDate).getTime());
+      if (b > a) intervals.push([a, b, log.domain || "unknown"]);
+    }
+
+    // 겹치는 구간을 합쳐서 전체 사용 시간 구간 생성
+    if (intervals.length > 0) {
+      intervals.sort((x, y) => x[0] - y[0]);
+      let [curS, curE] = intervals[0];
+      const unionIntervals = [];
+
+      for (let i = 1; i < intervals.length; i++) {
+        const [s, e] = intervals[i];
+        if (s <= curE) curE = Math.max(curE, e);
+        else {
+          unionIntervals.push([curS, curE]);
+          curS = s;
+          curE = e;
+        }
+      }
+      unionIntervals.push([curS, curE]);
+
+      // 각 사이트별로 실제 사용 시간 계산
+      const siteUsage = new Map();
+
+      for (const [startMs, endMs] of unionIntervals) {
+        // 이 구간에서 활성화된 사이트들 찾기
+        const activeSites = new Map();
+
+        for (const [s, e, domain] of intervals) {
+          if (s < endMs && e > startMs) {
+            // 겹치는 구간 계산
+            const overlapStart = Math.max(s, startMs);
+            const overlapEnd = Math.min(e, endMs);
+            const overlapDuration = overlapEnd - overlapStart;
+
+            activeSites.set(
+              domain,
+              (activeSites.get(domain) || 0) + overlapDuration
+            );
+          }
+        }
+
+        // 이 구간의 시간을 활성 사이트들에게 분배
+        const intervalDuration = endMs - startMs;
+        const totalActiveTime = Array.from(activeSites.values()).reduce(
+          (sum, time) => sum + time,
+          0
+        );
+
+        if (totalActiveTime > 0) {
+          for (const [domain, activeTime] of activeSites) {
+            const ratio = activeTime / totalActiveTime;
+            const siteTime = Math.round((intervalDuration * ratio) / 1000);
+            siteUsage.set(domain, (siteUsage.get(domain) || 0) + siteTime);
+          }
+        }
+      }
+
+      // 상위 6 + 기타
+      const entries = Array.from(siteUsage.entries()).sort(
+        (a, b) => b[1] - a[1]
+      );
+      const top6 = entries.slice(0, 6);
+      const topSeconds = top6.reduce(
+        (s, [, v]) => s + (Number.isFinite(v) ? v : 0),
+        0
+      );
+      const otherSeconds = Math.max(0, totalUnionSeconds - topSeconds);
+
+      const labels = top6.map(([d]) => d);
+      const data = top6.map(([, v]) => v / 60);
+      if (otherSeconds > 0) {
+        labels.push("기타");
+        data.push(otherSeconds / 60);
+      }
+
+      const colors = [
+        "#FF6B6B",
+        "#4ECDC4",
+        "#45B7D1",
+        "#96CEB4",
+        "#FFEAA7",
+        "#DDA0DD",
+        "#98D8C8",
+        "#F7DC6F",
+        "#BB8FCE",
+        "#85C1E9",
+        "#F8C471",
+        "#82E0AA",
+      ];
+
+      const ctx = distributionChartEl.getContext("2d");
+      distributionChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [
+            {
+              data,
+              backgroundColor: colors.slice(0, labels.length),
+              borderWidth: 2,
+              borderColor: "rgba(255,255,255,0.2)",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "60%",
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(0,0,0,0.8)",
+              titleColor: "#fff",
+              bodyColor: "#fff",
+              callbacks: {
+                label(ctx) {
+                  const m = ctx.parsed || 0;
+                  const h = Math.floor(m / 60),
+                    mm = Math.round(m % 60);
+                  const pct = (
+                    (m / data.reduce((a, b) => a + b, 0)) *
+                    100
+                  ).toFixed(1);
+                  return `${ctx.label}: ${h}시간 ${mm}분 (${pct}%)`;
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    }
   }
 
   // =========================================================================
-  // 집계 유틸리티들
+  // 집계 유틸리티들 (dateMs 포함)
   // =========================================================================
-
-  /**
-   * 일별 그룹화
-   */
   function groupByDay(start, end, records) {
     const groups = new Map();
 
-    records.forEach((record, index, arr) => {
-      const dateUtc = new Date(record.timestamp);
+    // 각 일별로 해당 일에 속하는 로그들을 그룹화
+    records.forEach(rec => {
+      const dateUtc = new Date(rec.timestamp);
       const date = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
-      const key = getDateKey(date, "daily");
-      groups.set(
-        key,
-        groups.get(key) || {
-          date: key,
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(date.getDate()).padStart(2, "0")}`;
+      const dateMs = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        0,
+        0,
+        0,
+        0
+      ).getTime();
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          dateKey: key,
+          dateMs,
           totalSeconds: 0,
           sites: new Map(),
           sessions: 0,
-        }
-      );
+          records: [], // 해당 일의 모든 로그를 저장
+        });
+      }
 
-      const group = groups.get(key);
-      const timeSpent = getTimeInRangeSeconds(record, start, end);
-      group.totalSeconds += timeSpent;
-      group.sessions += 1;
-
-      const domain = record.domain || "unknown";
-      group.sites.set(domain, (group.sites.get(domain) || 0) + timeSpent);
+      const g = groups.get(key);
+      g.records.push(rec);
     });
 
-    return Array.from(groups.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
+    // 각 일별로 getUnionTimeSeconds와 동일한 방식으로 계산
+    for (const [key, g] of groups) {
+      // 각 일별로 해당 일의 시작과 끝 시간을 계산
+      const dayStart = new Date(g.dateMs);
+      const dayEnd = new Date(g.dateMs + 24 * 60 * 60 * 1000); // 24시간 후
+
+      // 전체 조회 범위와 일별 범위의 교집합을 사용
+      const effectiveStart = new Date(
+        Math.max(dayStart.getTime(), new Date(start).getTime())
+      );
+      const effectiveEnd = new Date(
+        Math.min(dayEnd.getTime(), new Date(end).getTime())
+      );
+
+      // getUnionTimeSeconds와 동일한 방식으로 계산
+      const intervals = [];
+      for (const rec of g.records) {
+        const sMs = new Date(rec.timestamp).getTime();
+        if (!Number.isFinite(sMs)) continue;
+
+        let eMs = null;
+        if (rec.endTime) {
+          const t = new Date(rec.endTime).getTime();
+          if (Number.isFinite(t) && t > sMs) eMs = t;
+        }
+        if (!eMs && rec.actualTime && rec.actualTime > 0)
+          eMs = sMs + rec.actualTime;
+        if (!eMs) {
+          let nextMs =
+            getNextTimestampSameTabMs(rec) || getNextTimestampMs(sMs);
+          if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
+        }
+        if (!eMs)
+          eMs = isTabTrackerEnabled
+            ? Math.min(sMs + 10800000, Date.now())
+            : sMs + 30000;
+
+        // 일별 범위로 클리핑
+        const a = Math.max(sMs, effectiveStart.getTime());
+        const b = Math.min(eMs, effectiveEnd.getTime());
+        if (b > a) intervals.push([a, b]);
+      }
+
+      // getUnionTimeSeconds와 동일한 방식으로 겹치는 구간 합치기
+      if (intervals.length > 0) {
+        intervals.sort((x, y) => x[0] - y[0]);
+        let [curS, curE] = intervals[0];
+        let total = 0;
+        for (let i = 1; i < intervals.length; i++) {
+          const [s, e] = intervals[i];
+          if (s <= curE) curE = Math.max(curE, e);
+          else {
+            total += curE - curS;
+            curS = s;
+            curE = e;
+          }
+        }
+        total += curE - curS;
+        g.totalSeconds = Math.round(total / 1000);
+      }
+
+      // 사이트별 통계 계산 (중복 제거 후)
+      for (const rec of g.records) {
+        const sec = getTimeInRangeSeconds(rec, effectiveStart, effectiveEnd);
+        const domain = rec.domain || "unknown";
+        g.sites.set(domain, (g.sites.get(domain) || 0) + sec);
+      }
+
+      g.sessions = g.records.length;
+      delete g.records; // 메모리 정리
+    }
+
+    return Array.from(groups.values()).sort((a, b) => a.dateMs - b.dateMs);
   }
 
-  /**
-   * 시간별 그룹화
-   */
   function groupByHour(start, end, records) {
     const groups = new Map();
 
-    records.forEach((record, index, arr) => {
-      const dateUtc = new Date(record.timestamp);
-      const date = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
-      const key = getDateKey(date, "hourly");
-      groups.set(
-        key,
-        groups.get(key) || {
-          date: key,
+    // 각 시간대별로 해당 시간대에 속하는 로그들을 그룹화
+    records.forEach(rec => {
+      const dateUtc = new Date(rec.timestamp);
+      const d = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(d.getDate()).padStart(2, "0")} ${String(
+        d.getHours()
+      ).padStart(2, "0")}:00`;
+      const dateMs = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+        d.getHours(),
+        0,
+        0,
+        0
+      ).getTime();
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          dateKey: key,
+          dateMs,
           totalSeconds: 0,
           sites: new Map(),
           sessions: 0,
-        }
-      );
+          records: [], // 해당 시간대의 모든 로그를 저장
+        });
+      }
 
-      const group = groups.get(key);
-      const timeSpent = getTimeInRangeSeconds(record, start, end);
-      group.totalSeconds += timeSpent;
-      group.sessions += 1;
-
-      const domain = record.domain || "unknown";
-      group.sites.set(domain, (group.sites.get(domain) || 0) + timeSpent);
+      const g = groups.get(key);
+      g.records.push(rec);
     });
 
-    return Array.from(groups.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
+    // 각 시간대별로 getUnionTimeSeconds와 동일한 방식으로 계산
+    for (const [key, g] of groups) {
+      // 각 시간대별로 해당 시간대의 시작과 끝 시간을 계산
+      const hourStart = new Date(g.dateMs);
+      const hourEnd = new Date(g.dateMs + 60 * 60 * 1000); // 1시간 후
+
+      // 전체 조회 범위와 시간대 범위의 교집합을 사용
+      const effectiveStart = new Date(
+        Math.max(hourStart.getTime(), new Date(start).getTime())
+      );
+      const effectiveEnd = new Date(
+        Math.min(hourEnd.getTime(), new Date(end).getTime())
+      );
+
+      // getUnionTimeSeconds와 동일한 방식으로 계산
+      const intervals = [];
+      for (const rec of g.records) {
+        const sMs = new Date(rec.timestamp).getTime();
+        if (!Number.isFinite(sMs)) continue;
+
+        let eMs = null;
+        if (rec.endTime) {
+          const t = new Date(rec.endTime).getTime();
+          if (Number.isFinite(t) && t > sMs) eMs = t;
+        }
+        if (!eMs && rec.actualTime && rec.actualTime > 0)
+          eMs = sMs + rec.actualTime;
+        if (!eMs) {
+          let nextMs =
+            getNextTimestampSameTabMs(rec) || getNextTimestampMs(sMs);
+          if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
+        }
+        if (!eMs)
+          eMs = isTabTrackerEnabled
+            ? Math.min(sMs + 10800000, Date.now())
+            : sMs + 30000;
+
+        // 시간대 범위로 클리핑
+        const a = Math.max(sMs, effectiveStart.getTime());
+        const b = Math.min(eMs, effectiveEnd.getTime());
+        if (b > a) intervals.push([a, b]);
+      }
+
+      // getUnionTimeSeconds와 동일한 방식으로 겹치는 구간 합치기
+      if (intervals.length > 0) {
+        intervals.sort((x, y) => x[0] - y[0]);
+        let [curS, curE] = intervals[0];
+        let total = 0;
+        for (let i = 1; i < intervals.length; i++) {
+          const [s, e] = intervals[i];
+          if (s <= curE) curE = Math.max(curE, e);
+          else {
+            total += curE - curS;
+            curS = s;
+            curE = e;
+          }
+        }
+        total += curE - curS;
+        g.totalSeconds = Math.round(total / 1000);
+      }
+
+      // 사이트별 통계 계산 (중복 제거 후)
+      for (const rec of g.records) {
+        const sec = getTimeInRangeSeconds(rec, effectiveStart, effectiveEnd);
+        const domain = rec.domain || "unknown";
+        g.sites.set(domain, (g.sites.get(domain) || 0) + sec);
+      }
+
+      g.sessions = g.records.length;
+      delete g.records; // 메모리 정리
+    }
+
+    return Array.from(groups.values()).sort((a, b) => a.dateMs - b.dateMs);
   }
 
-  /**
-   * 주별 그룹화
-   */
   function groupByWeek(start, end, records) {
     const groups = new Map();
 
-    records.forEach((record, index, arr) => {
-      const dateUtc = new Date(record.timestamp);
-      const date = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
-      const key = getDateKey(date, "weekly");
-      groups.set(
-        key,
-        groups.get(key) || {
-          date: key,
+    // 각 주별로 해당 주에 속하는 로그들을 그룹화
+    records.forEach(rec => {
+      const dateUtc = new Date(rec.timestamp);
+      const d = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
+      const weekStart = new Date(d);
+      weekStart.setDate(d.getDate() - d.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const key = `${weekStart.getFullYear()}-${String(
+        weekStart.getMonth() + 1
+      ).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+      const dateMs = weekStart.getTime();
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          dateKey: key,
+          dateMs,
           totalSeconds: 0,
           sites: new Map(),
           sessions: 0,
-        }
-      );
+          records: [], // 해당 주의 모든 로그를 저장
+        });
+      }
 
-      const group = groups.get(key);
-      const timeSpent = getTimeInRangeSeconds(record, start, end);
-      group.totalSeconds += timeSpent;
-      group.sessions += 1;
-
-      const domain = record.domain || "unknown";
-      group.sites.set(domain, (group.sites.get(domain) || 0) + timeSpent);
+      const g = groups.get(key);
+      g.records.push(rec);
     });
 
-    return Array.from(groups.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
+    // 각 주별로 getUnionTimeSeconds와 동일한 방식으로 계산
+    for (const [key, g] of groups) {
+      // 각 주별로 해당 주의 시작과 끝 시간을 계산
+      const weekStart = new Date(g.dateMs);
+      const weekEnd = new Date(g.dateMs + 7 * 24 * 60 * 60 * 1000); // 7일 후
+
+      // 전체 조회 범위와 주별 범위의 교집합을 사용
+      const effectiveStart = new Date(
+        Math.max(weekStart.getTime(), new Date(start).getTime())
+      );
+      const effectiveEnd = new Date(
+        Math.min(weekEnd.getTime(), new Date(end).getTime())
+      );
+
+      // getUnionTimeSeconds와 동일한 방식으로 계산
+      const intervals = [];
+      for (const rec of g.records) {
+        const sMs = new Date(rec.timestamp).getTime();
+        if (!Number.isFinite(sMs)) continue;
+
+        let eMs = null;
+        if (rec.endTime) {
+          const t = new Date(rec.endTime).getTime();
+          if (Number.isFinite(t) && t > sMs) eMs = t;
+        }
+        if (!eMs && rec.actualTime && rec.actualTime > 0)
+          eMs = sMs + rec.actualTime;
+        if (!eMs) {
+          let nextMs =
+            getNextTimestampSameTabMs(rec) || getNextTimestampMs(sMs);
+          if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
+        }
+        if (!eMs)
+          eMs = isTabTrackerEnabled
+            ? Math.min(sMs + 10800000, Date.now())
+            : sMs + 30000;
+
+        // 주별 범위로 클리핑
+        const a = Math.max(sMs, effectiveStart.getTime());
+        const b = Math.min(eMs, effectiveEnd.getTime());
+        if (b > a) intervals.push([a, b]);
+      }
+
+      // getUnionTimeSeconds와 동일한 방식으로 겹치는 구간 합치기
+      if (intervals.length > 0) {
+        intervals.sort((x, y) => x[0] - y[0]);
+        let [curS, curE] = intervals[0];
+        let total = 0;
+        for (let i = 1; i < intervals.length; i++) {
+          const [s, e] = intervals[i];
+          if (s <= curE) curE = Math.max(curE, e);
+          else {
+            total += curE - curS;
+            curS = s;
+            curE = e;
+          }
+        }
+        total += curE - curS;
+        g.totalSeconds = Math.round(total / 1000);
+      }
+
+      // 사이트별 통계 계산 (중복 제거 후)
+      for (const rec of g.records) {
+        const sec = getTimeInRangeSeconds(rec, effectiveStart, effectiveEnd);
+        const domain = rec.domain || "unknown";
+        g.sites.set(domain, (g.sites.get(domain) || 0) + sec);
+      }
+
+      g.sessions = g.records.length;
+      delete g.records; // 메모리 정리
+    }
+
+    return Array.from(groups.values()).sort((a, b) => a.dateMs - b.dateMs);
   }
 
-  /**
-   * 시간별 사용 시간 리스트 업데이트
-   */
+  // =========================================================================
+  // 시간 리스트 & 타임라인 & 사이트 리스트
+  // =========================================================================
   function updateTimeList() {
     if (!timeListContainer) return;
-
-    if (filteredData.length === 0) {
+    if (!filteredData.length) {
       timeListContainer.innerHTML =
         '<div class="no-data">데이터가 없습니다</div>';
       return;
     }
 
-    let timeListHtml = "";
-
-    if (currentView === "daily") {
-      // 일별 데이터
-      const dailyGroups = groupByDay(
-        currentFilters.startDate,
-        currentFilters.endDate,
-        filteredData
-      );
-
-      dailyGroups.forEach(group => {
-        try {
-          const date = new Date(group.date);
-          if (isNaN(date.getTime())) {
-            console.warn("Invalid date in time list:", group.date);
-            return;
-          }
-
-          const dateLabel = formatDateLabel(date, "daily");
-          timeListHtml += `
-            <div class="time-list-item">
-              <div class="time-list-date">${dateLabel}</div>
-              <div class="time-list-duration">${formatDuration(
-                group.totalSeconds
-              )}</div>
-            </div>
-          `;
-        } catch (error) {
-          console.error(
-            "Error processing daily group in time list:",
-            error,
-            group
+    let groups =
+      currentView === "hourly"
+        ? groupByHour(
+            currentFilters.startDate,
+            currentFilters.endDate,
+            filteredData
+          )
+        : currentView === "weekly"
+        ? groupByWeek(
+            currentFilters.startDate,
+            currentFilters.endDate,
+            filteredData
+          )
+        : groupByDay(
+            currentFilters.startDate,
+            currentFilters.endDate,
+            filteredData
           );
-        }
-      });
-    } else if (currentView === "hourly") {
-      // 시간별 데이터
-      const hourlyGroups = groupByHour(
-        currentFilters.startDate,
-        currentFilters.endDate,
-        filteredData
-      );
 
-      hourlyGroups.forEach(group => {
-        try {
-          const date = new Date(group.date);
-          if (isNaN(date.getTime())) {
-            console.warn("Invalid date in time list:", group.date);
-            return;
-          }
-
-          const timeLabel = formatDateLabel(date, "hourly");
-          timeListHtml += `
-            <div class="time-list-item">
-              <div class="time-list-date">${timeLabel}</div>
-              <div class="time-list-duration">${formatDuration(
-                group.totalSeconds
-              )}</div>
-            </div>
-          `;
-        } catch (error) {
-          console.error(
-            "Error processing hourly group in time list:",
-            error,
-            group
-          );
-        }
-      });
-    } else if (currentView === "weekly") {
-      // 주별 데이터
-      const weeklyGroups = groupByWeek(
-        currentFilters.startDate,
-        currentFilters.endDate,
-        filteredData
-      );
-
-      weeklyGroups.forEach(group => {
-        try {
-          const date = new Date(group.date);
-          if (isNaN(date.getTime())) {
-            console.warn("Invalid date in time list:", group.date);
-            return;
-          }
-
-          const weekLabel = formatDateLabel(date, "weekly");
-          timeListHtml += `
-            <div class="time-list-item">
-              <div class="time-list-date">${weekLabel}</div>
-              <div class="time-list-duration">${formatDuration(
-                group.totalSeconds
-              )}</div>
-            </div>
-          `;
-        } catch (error) {
-          console.error(
-            "Error processing weekly group in time list:",
-            error,
-            group
-          );
-        }
-      });
+    let html = "";
+    for (const g of groups) {
+      const label = formatDateLabel(new Date(g.dateMs), currentView);
+      html += `
+        <div class="time-list-item">
+          <div class="time-list-date">${esc(label)}</div>
+          <div class="time-list-duration">${esc(
+            formatDuration(g.totalSeconds)
+          )}</div>
+        </div>`;
     }
-
-    timeListContainer.innerHTML = timeListHtml;
+    timeListContainer.innerHTML = html;
   }
 
-  /**
-   * 타임라인 업데이트 (상세 데이터 리스트)
-   */
   function updateTimeline() {
     if (!timelineContainer) return;
 
-    let timelineHtml = "";
-
-    // 조회 기간 내 접속한 모든 페이지를 최신순으로 표시하되,
-    // 시간 계산은 오름차순으로 정렬된 filteredData를 기준으로 수행
-    const sortedData = [...filteredData].sort(
+    // 최신순 표시 데이터
+    const sortedDesc = [...filteredData].sort(
       (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
     );
 
-    timelineHtml += `
+    // indexOf O(n²) 방지: 오름차순 배열에서 위치 map
+    const indexMap = new Map(filteredData.map((r, i) => [r, i]));
+
+    let html = `
       <div class="timeline-day">
         <div class="day-header">조회 기간 내 접속 페이지 목록</div>
-        <div class="day-summary">
-          총 ${sortedData.length}개 페이지 | 시간 순 정렬
-        </div>
+        <div class="day-summary">총 ${sortedDesc.length}개 페이지 | 시간 순 정렬</div>
     `;
 
-    sortedData.forEach((record, displayIndex) => {
-      const indexInAsc = filteredData.indexOf(record);
-      const timeSpent = getEstimatedTimeInSeconds(
-        record,
-        indexInAsc,
-        filteredData
-      );
-      const visitTime = new Date(record.timestamp).toLocaleString("ko-KR", {
+    sortedDesc.forEach((rec, displayIndex) => {
+      const idxAsc = indexMap.get(rec);
+      const sec = getEstimatedTimeInSeconds(rec, idxAsc, filteredData);
+      const visitTime = new Date(rec.timestamp).toLocaleString("ko-KR", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -1707,65 +1523,61 @@ document.addEventListener("DOMContentLoaded", async () => {
         minute: "2-digit",
       });
 
-      // URL과 제목 길이 제한
-      let displayUrl = record.url;
-
-      // URL이 너무 길면 중간 부분을 잘라서 표시
-      if (displayUrl.length > 60) {
-        const protocol = displayUrl.startsWith("https://")
+      // URL 표시 축약
+      let dispUrl = rec.url || "";
+      if (dispUrl.length > 60) {
+        const proto = dispUrl.startsWith("https://")
           ? "https://"
-          : displayUrl.startsWith("http://")
+          : dispUrl.startsWith("http://")
           ? "http://"
           : "";
-        const domain = displayUrl.replace(/^https?:\/\//, "").split("/")[0];
-        const path = displayUrl.replace(/^https?:\/\/[^\/]+/, "");
-
+        const domain = dispUrl.replace(/^https?:\/\//, "").split("/")[0];
+        const path = dispUrl.replace(/^https?:\/\/[^\/]+/, "");
         if (path.length > 0) {
-          const maxPathLength = 60 - protocol.length - domain.length - 3;
-          if (path.length > maxPathLength) {
+          const maxPath = 60 - proto.length - domain.length - 3;
+          if (path.length > maxPath) {
             const lastPart = path.substring(
-              path.length - Math.floor(maxPathLength / 2)
+              path.length - Math.floor(maxPath / 2)
             );
-            displayUrl = `${protocol}${domain}...${lastPart}`;
+            dispUrl = `${proto}${domain}...${lastPart}`;
           }
         } else {
-          displayUrl = `${protocol}${domain}`;
+          dispUrl = `${proto}${domain}`;
         }
       }
-
+      const title = rec.title || "";
       const truncatedTitle =
-        record.title.length > 40
-          ? record.title.substring(0, 37) + "..."
-          : record.title;
+        title.length > 40 ? title.substring(0, 37) + "..." : title;
 
-      timelineHtml += `
-        <div class="site-entry" data-url="${
-          record.url
-        }" style="cursor: pointer;">
+      html += `
+        <div class="site-entry" data-url="${esc(
+          rec.url
+        )}" style="cursor:pointer;">
           <div class="site-info">
-            <div class="site-title-col" title="${record.title}">${
+            <div class="site-title-col" title="${esc(title)}">${
         displayIndex + 1
-      }. ${truncatedTitle}</div>
-            <div class="site-url-col" title="${record.url}">${displayUrl}</div>
+      }. ${esc(truncatedTitle)}</div>
+            <div class="site-url-col" title="${esc(rec.url)}">${esc(
+        dispUrl
+      )}</div>
           </div>
-          <div class="site-time"><span class="visit-time">${visitTime}</span> | <span class="duration">${formatDuration(
-        timeSpent
+          <div class="site-time"><span class="visit-time">${esc(
+            visitTime
+          )}</span> | <span class="duration">${esc(
+        formatDuration(sec)
       )}</span></div>
-        </div>
-      `;
+        </div>`;
     });
 
-    timelineHtml += "</div>";
+    html += "</div>";
+    timelineContainer.innerHTML = html;
 
-    timelineContainer.innerHTML = timelineHtml;
-
-    // 타임라인 검색 필터 적용
+    // 검색
     const searchInput = document.getElementById("timeline-search");
     if (searchInput) {
       searchInput.oninput = () => {
         const q = (searchInput.value || "").trim().toLowerCase();
         if (!q) {
-          // 검색어 없으면 전체 다시 그림
           updateTimeline();
           return;
         }
@@ -1778,180 +1590,233 @@ document.addEventListener("DOMContentLoaded", async () => {
           } catch {}
           return t.includes(q) || u.includes(q) || d.includes(q);
         });
-        // 검색 결과로만 리스트 그리기 (최신순 표시는 유지)
-        const backup = filteredData;
-        filteredData = filtered;
-        const originalView = timelineContainer.innerHTML;
-        try {
-          let tmpHtml = "";
-          const sortedTmp = [...filteredData].sort(
-            (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-          );
-          sortedTmp.forEach(rec => {
-            const iAsc = backup.indexOf(rec);
-            const ts = getEstimatedTimeInSeconds(rec, iAsc, backup);
-            const vt = new Date(rec.timestamp).toLocaleString("ko-KR", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-            const td =
-              rec.title.length > 40
-                ? rec.title.substring(0, 37) + "..."
-                : rec.title;
-            let du = rec.url;
-            if (du.length > 60) {
-              const proto = du.startsWith("https://")
-                ? "https://"
-                : du.startsWith("http://")
-                ? "http://"
-                : "";
-              const dom = du.replace(/^https?:\/\//, "").split("/")[0];
-              const path = du.replace(/^https?:\/\/[^\/]+/, "");
-              if (path.length > 0) {
-                const maxLen = 60 - proto.length - dom.length - 3;
-                if (path.length > maxLen) {
-                  const last = path.substring(
-                    path.length - Math.floor(maxLen / 2)
-                  );
-                  du = `${proto}${dom}...${last}`;
-                }
-              } else {
-                du = `${proto}${dom}`;
-              }
-            }
-            tmpHtml += `
-              <div class="site-entry" data-url="${
-                rec.url
-              }" style="cursor: pointer;">
-                <div class="site-info">
-                  <div class="site-title-col" title="${rec.title}">${td}</div>
-                  <div class="site-url-col" title="${rec.url}">${du}</div>
-                </div>
-                <div class="site-time"><span class="visit-time">${vt}</span> | <span class="duration">${formatDuration(
-              ts
-            )}</span></div>
-              </div>`;
+        const idxMap = new Map(filteredData.map((r, i) => [r, i]));
+        const sortedTmp = [...filtered].sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        );
+        let tmp = `
+          <div class="timeline-day">
+            <div class="day-header">조회 기간 내 접속 페이지 목록</div>
+            <div class="day-summary">총 ${sortedTmp.length}개 페이지 | 시간 순 정렬</div>
+        `;
+        sortedTmp.forEach((rec, i) => {
+          const iAsc = idxMap.get(rec);
+          const sec = getEstimatedTimeInSeconds(rec, iAsc, filteredData);
+          const vt = new Date(rec.timestamp).toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
           });
-          timelineContainer.innerHTML = `
-            <div class="timeline-day">
-              <div class="day-header">조회 기간 내 접속 페이지 목록</div>
-              <div class="day-summary">총 ${sortedTmp.length}개 페이지 | 시간 순 정렬</div>
-            ${tmpHtml}
+          const title = rec.title || "";
+          const td = title.length > 40 ? title.substring(0, 37) + "..." : title;
+          let du = rec.url || "";
+          if (du.length > 60) {
+            const proto = du.startsWith("https://")
+              ? "https://"
+              : du.startsWith("http://")
+              ? "http://"
+              : "";
+            const dom = du.replace(/^https?:\/\//, "").split("/")[0];
+            const path = du.replace(/^https?:\/\/[^\/]+/, "");
+            if (path.length > 0) {
+              const maxLen = 60 - proto.length - dom.length - 3;
+              if (path.length > maxLen) {
+                const last = path.substring(
+                  path.length - Math.floor(maxLen / 2)
+                );
+                du = `${proto}${dom}...${last}`;
+              }
+            } else du = `${proto}${dom}`;
+          }
+          tmp += `
+            <div class="site-entry" data-url="${esc(
+              rec.url
+            )}" style="cursor:pointer;">
+              <div class="site-info">
+                <div class="site-title-col" title="${esc(title)}">${
+            i + 1
+          }. ${esc(td)}</div>
+                <div class="site-url-col" title="${esc(rec.url)}">${esc(
+            du
+          )}</div>
+              </div>
+              <div class="site-time"><span class="visit-time">${esc(
+                vt
+              )}</span> | <span class="duration">${esc(
+            formatDuration(sec)
+          )}</span></div>
             </div>`;
-        } finally {
-          filteredData = backup;
-        }
+        });
+        tmp += "</div>";
+        timelineContainer.innerHTML = tmp;
       };
     }
   }
 
-  /**
-   * 사이트 목록 업데이트
-   */
   function updateSiteList() {
-    const siteListContainer = document.getElementById("site-list-container");
-    const siteList = document.getElementById("site-list");
+    const container = document.getElementById("site-list-container");
+    const list = document.getElementById("site-list");
+    if (!container || !list) return;
 
-    if (!siteListContainer || !siteList) return;
+    // 전체 중복 제거된 사용 시간 계산
+    const totalUnionSeconds = getUnionTimeSeconds(
+      currentFilters.startDate,
+      currentFilters.endDate,
+      filteredData
+    );
 
-    // 사이트별 사용 시간 집계
-    const siteUsage = new Map();
-    filteredData.forEach((record, index, arr) => {
-      const domain = record.domain || "unknown";
-      const timeSpent = getEstimatedTimeInSeconds(record, index, arr);
-      siteUsage.set(domain, (siteUsage.get(domain) || 0) + timeSpent);
-    });
-
-    if (siteUsage.size === 0) {
-      siteListContainer.style.display = "none";
+    if (totalUnionSeconds === 0) {
+      container.style.display = "none";
       return;
     }
 
-    // 사용 시간 순으로 정렬
-    const sortedSites = Array.from(siteUsage.entries()).sort(
-      (a, b) => b[1] - a[1]
-    );
+    // 전체 사용 시간 구간 계산
+    const intervals = [];
+    for (const log of filteredData) {
+      const sMs = new Date(log.timestamp).getTime();
+      if (!Number.isFinite(sMs)) continue;
 
-    const totalSeconds = sortedSites.reduce(
-      (sum, [_, seconds]) => sum + (Number.isFinite(seconds) ? seconds : 0),
-      0
-    );
+      let eMs = null;
+      if (log.endTime) {
+        const t = new Date(log.endTime).getTime();
+        if (Number.isFinite(t) && t > sMs) eMs = t;
+      }
+      if (!eMs && log.actualTime && log.actualTime > 0)
+        eMs = sMs + log.actualTime;
+      if (!eMs) {
+        let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
+        if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
+      }
+      if (!eMs)
+        eMs = isTabTrackerEnabled
+          ? Math.min(sMs + 10800000, Date.now())
+          : sMs + 30000;
 
-    const colors = [
-      "#FF6B6B",
-      "#4ECDC4",
-      "#45B7D1",
-      "#96CEB4",
-      "#FFEAA7",
-      "#DDA0DD",
-      "#98D8C8",
-      "#F7DC6F",
-      "#BB8FCE",
-      "#85C1E9",
-      "#F8C471",
-      "#82E0AA",
-    ];
+      const a = Math.max(sMs, new Date(currentFilters.startDate).getTime());
+      const b = Math.min(eMs, new Date(currentFilters.endDate).getTime());
+      if (b > a) intervals.push([a, b, log.domain || "unknown"]);
+    }
 
-    let siteListHtml = "";
-    sortedSites.forEach(([domain, seconds], index) => {
-      const percentage =
-        totalSeconds > 0 ? ((seconds / totalSeconds) * 100).toFixed(1) : 0;
-      const color = colors[index % colors.length];
+    // 겹치는 구간을 합쳐서 전체 사용 시간 구간 생성
+    if (intervals.length > 0) {
+      intervals.sort((x, y) => x[0] - y[0]);
+      let [curS, curE] = intervals[0];
+      const unionIntervals = [];
 
-      siteListHtml += `
-        <div class="site-item">
-          <div class="site-item-info">
-            <div class="site-color" style="background-color: ${color}"></div>
-            <div class="site-domain">${domain}</div>
-          </div>
-          <div class="site-time">
-            ${formatDuration(seconds)}
-            <span class="site-percentage">(${percentage}%)</span>
-          </div>
-        </div>
-      `;
-    });
+      for (let i = 1; i < intervals.length; i++) {
+        const [s, e] = intervals[i];
+        if (s <= curE) curE = Math.max(curE, e);
+        else {
+          unionIntervals.push([curS, curE]);
+          curS = s;
+          curE = e;
+        }
+      }
+      unionIntervals.push([curS, curE]);
 
-    siteList.innerHTML = siteListHtml;
-    siteListContainer.style.display = "block";
+      // 각 사이트별로 실제 사용 시간 계산
+      const siteUsage = new Map();
+
+      for (const [startMs, endMs] of unionIntervals) {
+        // 이 구간에서 활성화된 사이트들 찾기
+        const activeSites = new Map();
+
+        for (const [s, e, domain] of intervals) {
+          if (s < endMs && e > startMs) {
+            // 겹치는 구간 계산
+            const overlapStart = Math.max(s, startMs);
+            const overlapEnd = Math.min(e, endMs);
+            const overlapDuration = overlapEnd - overlapStart;
+
+            activeSites.set(
+              domain,
+              (activeSites.get(domain) || 0) + overlapDuration
+            );
+          }
+        }
+
+        // 이 구간의 시간을 활성 사이트들에게 분배
+        const intervalDuration = endMs - startMs;
+        const totalActiveTime = Array.from(activeSites.values()).reduce(
+          (sum, time) => sum + time,
+          0
+        );
+
+        if (totalActiveTime > 0) {
+          for (const [domain, activeTime] of activeSites) {
+            const ratio = activeTime / totalActiveTime;
+            const siteTime = Math.round((intervalDuration * ratio) / 1000);
+            siteUsage.set(domain, (siteUsage.get(domain) || 0) + siteTime);
+          }
+        }
+      }
+
+      const sorted = Array.from(siteUsage.entries()).sort(
+        (a, b) => b[1] - a[1]
+      );
+      const colors = [
+        "#FF6B6B",
+        "#4ECDC4",
+        "#45B7D1",
+        "#96CEB4",
+        "#FFEAA7",
+        "#DDA0DD",
+        "#98D8C8",
+        "#F7DC6F",
+        "#BB8FCE",
+        "#85C1E9",
+        "#F8C471",
+        "#82E0AA",
+      ];
+
+      let html = "";
+      sorted.forEach(([domain, seconds], i) => {
+        const pct =
+          totalUnionSeconds > 0
+            ? ((seconds / totalUnionSeconds) * 100).toFixed(1)
+            : 0;
+        const color = colors[i % colors.length];
+        html += `
+          <div class="site-item">
+            <div class="site-item-info">
+              <div class="site-color" style="background-color:${color}"></div>
+              <div class="site-domain">${esc(domain)}</div>
+            </div>
+            <div class="site-time">${esc(
+              formatDuration(seconds)
+            )} <span class="site-percentage">(${pct}%)</span></div>
+          </div>`;
+      });
+      list.innerHTML = html;
+      container.style.display = "block";
+    }
   }
 
-  /**
-   * 현재 열린 Chrome 창 개수
-   */
+  // 창/탭 수
   async function getOpenWindowsCount() {
     try {
-      if (
-        typeof chrome !== "undefined" &&
-        chrome.windows &&
-        chrome.windows.getAll
-      ) {
-        return new Promise(resolve => {
-          chrome.windows.getAll({}, windows => {
-            resolve(Array.isArray(windows) ? windows.length : 1);
-          });
-        });
+      if (typeof chrome !== "undefined" && chrome.windows?.getAll) {
+        return new Promise(resolve =>
+          chrome.windows.getAll({}, wins =>
+            resolve(Array.isArray(wins) ? wins.length : 1)
+          )
+        );
       }
     } catch (e) {
       console.warn("getOpenWindowsCount failed:", e);
     }
     return 1;
   }
-
-  /**
-   * 현재 열린 탭 총 개수 (모든 창 합계)
-   */
   async function getOpenTabsCount() {
     try {
-      if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
-        return new Promise(resolve => {
-          chrome.tabs.query({}, tabs => {
-            resolve(Array.isArray(tabs) ? tabs.length : 0);
-          });
-        });
+      if (typeof chrome !== "undefined" && chrome.tabs?.query) {
+        return new Promise(resolve =>
+          chrome.tabs.query({}, tabs =>
+            resolve(Array.isArray(tabs) ? tabs.length : 0)
+          )
+        );
       }
     } catch (e) {
       console.warn("getOpenTabsCount failed:", e);
@@ -1960,17 +1825,96 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================================================================
+  // 기록 관리 함수들
+  // =========================================================================
+  async function deleteDataByDate() {
+    const selectedDate = deleteDateEl.value;
+    if (!selectedDate) {
+      alert("삭제할 날짜를 선택해주세요.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `선택한 날짜 (${selectedDate})의 모든 기록을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      showLoading(true);
+
+      // 선택한 날짜의 시작과 끝 시간 계산
+      const startOfDay = new Date(`${selectedDate}T00:00:00`);
+      const endOfDay = new Date(`${selectedDate}T23:59:59`);
+
+      // 현재 저장된 로그 가져오기
+      const result = await chrome.storage.local.get(["tabLogs"]);
+      const currentLogs = result.tabLogs || [];
+
+      // 선택한 날짜에 속하지 않는 로그만 필터링
+      const filteredLogs = currentLogs.filter(log => {
+        const logDate = new Date(log.timestamp);
+        return logDate < startOfDay || logDate > endOfDay;
+      });
+
+      // 필터링된 로그 저장
+      await chrome.storage.local.set({ tabLogs: filteredLogs });
+
+      // 데이터 새로고침
+      await loadData();
+      await applyFilters();
+
+      alert(`${selectedDate} 날짜의 기록이 성공적으로 삭제되었습니다.`);
+
+      // 날짜 입력 필드 초기화
+      deleteDateEl.value = "";
+    } catch (error) {
+      console.error("날짜별 기록 삭제 실패:", error);
+      alert("기록 삭제 중 오류가 발생했습니다.");
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  async function deleteAllData() {
+    if (
+      !confirm(
+        "모든 탭 활동 기록을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      showLoading(true);
+
+      // 모든 로그 삭제
+      await chrome.storage.local.set({ tabLogs: [] });
+
+      // 데이터 새로고침
+      await loadData();
+      await applyFilters();
+
+      alert("모든 기록이 성공적으로 삭제되었습니다.");
+    } catch (error) {
+      console.error("전체 기록 삭제 실패:", error);
+      alert("기록 삭제 중 오류가 발생했습니다.");
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // =========================================================================
   // 초기화
   // =========================================================================
-
-  // DOM 요소 검증
   if (!validateDOMElements()) {
     console.error(
       "Required DOM elements are missing. Please check the HTML structure."
     );
     return;
   }
-
   setupEventListeners();
   initializePage();
 });
