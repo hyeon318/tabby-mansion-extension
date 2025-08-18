@@ -112,6 +112,10 @@ body {
   margin-bottom: 5px;
 }
 
+.stat-value.current-sessions {
+  font-size: 24px;
+}
+
 .stat-label {
   font-size: 14px;
   opacity: 0.8;
@@ -416,7 +420,7 @@ select:disabled {
   margin-bottom: 5px;
   font-size: 12px;
   transition: all 0.3s ease;
-  cursor: pointer;
+  cursor: default;
   gap: 10px;
 }
 
@@ -540,7 +544,7 @@ select:disabled {
   border: none;
   color: white;
   font-size: 24px;
-  cursor: pointer;
+  cursor: default;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   transition: all 0.3s ease;
@@ -810,6 +814,127 @@ select:disabled {
 
 .delete-all-info {
   color: #ff6b6b;
+}
+
+/* 언어 설정 섹션 */
+.language-settings-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  margin: 20px 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.language-settings-header {
+  margin-bottom: 20px;
+}
+
+.language-settings-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffd700;
+  margin-bottom: 8px;
+}
+
+.language-settings-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.language-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.language-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 80px;
+}
+
+.language-select {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 14px;
+  min-width: 150px;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.language-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.language-select:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.language-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.current-language-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.current-language-display span:first-child {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.current-language-display span:last-child {
+  color: #ffd700;
+  font-weight: 600;
+}
+
+.language-description {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.4;
+}
+
+/* 언어 변경 메시지 애니메이션 */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* 반응형 디자인 */

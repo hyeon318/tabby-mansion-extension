@@ -2,12 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>TabbyMansion - 상세 통계</title>
+    <title data-i18n="pageTitle">TabbyMansion - 상세 통계</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="TabbyMansion - 사이트 사용 통계와 시간 관리 인사이트"
-    />
+    <meta name="description" content="" data-i18n-content="pageDescription" />
     <meta name="theme-color" content="#667eea" />
     <link rel="stylesheet" href="common.css" />
     <link rel="stylesheet" href="stats.css" />
@@ -22,15 +19,21 @@
               style="width: 30px; height: 30px"
               alt="logo"
             />
-            TabbyMansion 상세 통계
+            TabbyMansion <span data-i18n="detailedStats">상세 통계</span>
           </div>
-          <div id="stats-today-date" class="stats-today-date"></div>
+          <div
+            id="stats-today-date"
+            class="stats-today-date"
+            data-i18n-format="dateFullWithToday"
+          ></div>
         </div>
         <div class="subtitle">
-          사이트 사용 패턴 분석 및 시간 관리 인사이트
+          <span data-i18n="siteUsagePatternAnalysis"
+            >사이트 사용 패턴 분석 및 시간 관리 인사이트</span
+          >
           <span class="refresh-indicator">
             <span class="refresh-dot"></span>
-            실시간 업데이트
+            <span data-i18n="realTimeUpdate">실시간 업데이트</span>
           </span>
         </div>
       </div>
@@ -38,35 +41,51 @@
       <!-- 필터 컨트롤 -->
       <div class="controls">
         <div class="filter-section">
-          <h3 class="filter-title">📅 조회 조건</h3>
+          <h3 class="filter-title">
+            📅 <span data-i18n="queryConditions">조회 조건</span>
+          </h3>
 
           <div class="filter-group" style="display: none">
-            <label class="filter-label">시간대 및 언어</label>
+            <label class="filter-label" data-i18n="timezoneAndLanguage"
+              >시간대 및 언어</label
+            >
             <select class="-iselectnput" id="timezone-select">
-              <option value="Asia/Seoul">🇰🇷 한국 (KST)</option>
-              <option value="Europe/London">🇬🇧 영국 (GMT/BST)</option>
-              <option value="America/New_York">🇺🇸 뉴욕 (EST/EDT)</option>
-              <option value="America/Los_Angeles">
+              <option value="Asia/Seoul" data-i18n="tzKorea">
+                🇰🇷 한국 (KST)
+              </option>
+              <option value="Europe/London" data-i18n="tzUK">
+                🇬🇧 영국 (GMT/BST)
+              </option>
+              <option value="America/New_York" data-i18n="tzNewYork">
+                🇺🇸 뉴욕 (EST/EDT)
+              </option>
+              <option value="America/Los_Angeles" data-i18n="tzLosAngeles">
                 🇺🇸 로스앤젤레스 (PST/PDT)
               </option>
-              <option value="Europe/Berlin">🇩🇪 베를린 (CET/CEST)</option>
+              <option value="Europe/Berlin" data-i18n="tzBerlin">
+                🇩🇪 베를린 (CET/CEST)
+              </option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label class="filter-label">조회 기간</label>
+            <label class="filter-label" data-i18n="queryPeriod"
+              >조회 기간</label
+            >
             <div class="date-range">
               <input
                 type="date"
                 id="start-date"
                 class="date-input"
                 placeholder="시작일"
+                data-i18n-placeholder="startDate"
               />
               <input
                 type="time"
                 id="start-time"
                 class="date-input"
                 placeholder="시작 시각"
+                data-i18n-placeholder="startTime"
                 value="00:00"
               />
               <span class="date-separator">~</span>
@@ -75,44 +94,65 @@
                 id="end-date"
                 class="date-input"
                 placeholder="종료일"
+                data-i18n-placeholder="endDate"
               />
               <input
                 type="time"
                 id="end-time"
                 class="date-input"
                 placeholder="종료 시각"
+                data-i18n-placeholder="endTime"
                 value="23:59"
               />
-            </div>
-            <div class="time-range-info">
-              <span id="time-range-display">시작일 00:00 ~ 종료일 23:59</span>
             </div>
           </div>
 
           <div class="filter-group" style="display: none">
-            <label class="filter-label">사이트 필터</label>
+            <label class="filter-label" data-i18n="siteFilter"
+              >사이트 필터</label
+            >
             <select class="select-input" id="site-filter">
-              <option value="">전체 사이트</option>
+              <option value="" data-i18n="allSites">전체 사이트</option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label class="filter-label">분석 단위</label>
+            <label class="filter-label" data-i18n="analysisUnit"
+              >분석 단위</label
+            >
             <div class="view-buttons">
-              <button class="btn active" id="view-daily">일별</button>
-              <button class="btn" id="view-hourly">시간별</button>
-              <button class="btn" id="view-weekly">주별</button>
+              <button class="btn active" id="view-daily" data-i18n="daily">
+                일별
+              </button>
+              <button class="btn" id="view-hourly" data-i18n="hourly">
+                시간별
+              </button>
+              <button class="btn" id="view-weekly" data-i18n="weekly">
+                주별
+              </button>
             </div>
           </div>
 
           <div class="filter-actions">
-            <button class="btn btn-primary" id="apply-filter">
+            <button
+              class="btn btn-primary"
+              id="apply-filter"
+              data-i18n="applyFilter"
+            >
               🔍 조회하기
             </button>
-            <button class="btn btn-secondary" id="reset-filter">
+            <button
+              class="btn btn-secondary"
+              id="reset-filter"
+              data-i18n="resetFilter"
+            >
               🔄 초기화
             </button>
-            <button class="btn btn-secondary" id="export-data">
+            <button
+              class="btn btn-secondary"
+              id="export-data"
+              data-i18n="exportData"
+            >
               📤 데이터 내보내기
             </button>
           </div>
@@ -122,42 +162,50 @@
       <!-- 조회 결과 -->
       <div class="results-section" id="results-section">
         <div class="results-header">
-          <h2 class="results-title">조회 결과</h2>
-          <div class="results-period" id="results-period">
-            2025년 08월 15일 (오늘)
-          </div>
+          <h2 class="results-title" data-i18n="queryResults">조회 결과</h2>
+          <div
+            class="results-period"
+            id="results-period"
+            data-i18n-format="dateFull"
+          ></div>
         </div>
 
         <!-- 통계 개요 -->
         <div class="stats-overview" id="stats-overview">
           <div class="stat-card tooltip">
             <div class="stat-value" id="total-time">0분</div>
-            <div class="stat-label">총 사용 시간</div>
-            <span class="tooltiptext"
+            <div class="stat-label" data-i18n="totalUsageTime">
+              총 사용 시간
+            </div>
+            <span class="tooltiptext" data-i18n="ttTotalUsageTime"
               >선택한 기간 동안 모든 사이트에서 보낸 총 시간입니다. 탭 전환
               시점을 기준으로 계산됩니다.</span
             >
           </div>
           <div class="stat-card tooltip">
             <div class="stat-value" id="total-sites">0개</div>
-            <div class="stat-label">방문한 사이트</div>
-            <span class="tooltiptext"
+            <div class="stat-label" data-i18n="visitedSites">방문한 사이트</div>
+            <span class="tooltiptext" data-i18n="ttVisitedSites"
               >선택한 기간 동안 방문한 고유한 도메인 수입니다. 같은 사이트의
               다른 페이지는 하나로 집계됩니다.</span
             >
           </div>
           <div class="stat-card tooltip">
             <div class="stat-value" id="total-sessions">0회</div>
-            <div class="stat-label">총 세션 수</div>
-            <span class="tooltiptext"
+            <div class="stat-label" data-i18n="totalSessions">총 세션 수</div>
+            <span class="tooltiptext" data-i18n="ttTotalSessions"
               >탭을 활성화한 총 횟수입니다. 탭 전환할 때마다 새로운 세션으로
               카운트됩니다.</span
             >
           </div>
           <div class="stat-card tooltip">
-            <div class="stat-value" id="current-sessions">0회</div>
-            <div class="stat-label">현재 세션 수</div>
-            <span class="tooltiptext"
+            <div class="stat-value current-sessions" id="current-sessions">
+              0회
+            </div>
+            <div class="stat-label" data-i18n="currentSessions">
+              현재 세션 수
+            </div>
+            <span class="tooltiptext" data-i18n="ttCurrentSessions"
               >현재 조회 기간 내에서 활성화된 탭의 총 횟수입니다. 탭 전환할
               때마다 새로운 세션으로 카운트됩니다.</span
             >
@@ -167,8 +215,14 @@
         <!-- 차트 섹션 -->
         <div class="charts-section" id="charts-section">
           <div class="chart-container">
-            <div class="chart-title">📈 기간별 사용 시간 추이</div>
-            <div class="chart-subtitle" id="time-chart-subtitle">
+            <div class="chart-title">
+              📈 <span data-i18n="timeUsageTrend">기간별 사용 시간 추이</span>
+            </div>
+            <div
+              class="chart-subtitle"
+              id="time-chart-subtitle"
+              data-i18n="checkHourlyPattern"
+            >
               시간대별 사용 패턴을 확인하세요
             </div>
             <div
@@ -196,16 +250,32 @@
             <!-- 시간별 사용 시간 리스트 -->
             <div class="time-list-section">
               <div class="time-list-header">
-                <div class="time-list-title">📊 시간별 사용 시간 리스트</div>
+                <div class="time-list-title">
+                  📊
+                  <span data-i18n="hourlyUsageList"
+                    >시간별 사용 시간 리스트</span
+                  >
+                </div>
               </div>
               <div class="time-list-container" id="time-list-container">
-                <div class="no-data">데이터를 불러오는 중...</div>
+                <div class="no-data" data-i18n="loadingData">
+                  데이터를 불러오는 중...
+                </div>
               </div>
             </div>
           </div>
           <div class="chart-container">
-            <div class="chart-title">🥧 사이트별 사용 시간 분포</div>
-            <div class="chart-subtitle" id="distribution-chart-subtitle">
+            <div class="chart-title">
+              🥧
+              <span data-i18n="siteUsageDistribution"
+                >사이트별 사용 시간 분포</span
+              >
+            </div>
+            <div
+              class="chart-subtitle"
+              id="distribution-chart-subtitle"
+              data-i18n="checkMostUsedSites"
+            >
               가장 많이 사용한 사이트를 확인하세요
             </div>
             <div class="chart-wrapper" style="position: relative">
@@ -221,7 +291,9 @@
             <div class="chart-stats" id="distribution-chart-stats"></div>
             <!-- 사이트 목록 추가 -->
             <div class="site-list-container" id="site-list-container">
-              <div class="site-list-title">📋 사이트별 상세 정보</div>
+              <div class="site-list-title">
+                📋 <span data-i18n="siteDetailedInfo">사이트별 상세 정보</span>
+              </div>
               <div class="site-list" id="site-list"></div>
             </div>
           </div>
@@ -230,26 +302,39 @@
         <!-- 타임라인 섹션 -->
         <div class="timeline-section" id="timeline-section">
           <div class="timeline-header">
-            <div class="timeline-title">📅 상세 데이터 리스트</div>
+            <div class="timeline-title">
+              📅 <span data-i18n="detailedDataList">상세 데이터 리스트</span>
+            </div>
+            <div class="timeline-subtitle" data-i18n="listOfAccessedPages">
+              조회 기간 내 접속 페이지 목록
+            </div>
             <div class="timeline-controls">
               <input
                 class="timeline-search-input"
                 id="timeline-search"
                 type="text"
                 placeholder="제목/도메인/주소 검색"
+                data-i18n-placeholder="searchTitleDomainAddress"
               />
             </div>
           </div>
           <div class="timeline-container" id="timeline-container">
-            <div class="no-data">데이터를 불러오는 중...</div>
+            <div class="no-data" data-i18n="loadingData">
+              데이터를 불러오는 중...
+            </div>
           </div>
         </div>
 
         <!-- 기록 관리 섹션 -->
         <div class="data-management-section" id="data-management-section">
           <div class="data-management-header">
-            <div class="data-management-title">🗑️ 기록 관리</div>
-            <div class="data-management-subtitle">
+            <div class="data-management-title">
+              🗑️ <span data-i18n="dataManagement">기록 관리</span>
+            </div>
+            <div
+              class="data-management-subtitle"
+              data-i18n="deleteOrResetRecords"
+            >
               특정 날짜의 기록을 삭제하거나 전체 기록을 초기화할 수 있습니다
             </div>
           </div>
@@ -257,33 +342,88 @@
           <div class="data-management-content">
             <!-- 일자별 삭제 -->
             <div class="delete-by-date-section">
-              <div class="section-title">📅 일자별 기록 삭제</div>
+              <div class="section-title">
+                📅 <span data-i18n="deleteByDate">일자별 기록 삭제</span>
+              </div>
               <div class="date-delete-controls">
                 <input
                   type="date"
                   id="delete-date"
                   class="date-input"
                   placeholder="삭제할 날짜 선택"
+                  data-i18n-placeholder="selectDateToDelete"
+                  data-i18n-format="yearMonthDay"
                 />
-                <button class="delete-date-btn" id="delete-date-btn">
+                <button
+                  class="delete-date-btn"
+                  id="delete-date-btn"
+                  data-i18n="deleteSelectedDateRecords"
+                >
                   선택한 날짜 기록 삭제
                 </button>
               </div>
-              <div class="delete-date-info">
+              <div class="delete-date-info" data-i18n="deleteDateInfo">
                 선택한 날짜의 모든 탭 활동 기록이 삭제됩니다.
               </div>
             </div>
 
             <!-- 전체 삭제 -->
             <div class="delete-all-section">
-              <div class="section-title">⚠️ 전체 기록 삭제</div>
+              <div class="section-title">
+                ⚠️ <span data-i18n="deleteAllRecords">전체 기록 삭제</span>
+              </div>
               <div class="delete-all-controls">
-                <button class="delete-all-btn" id="delete-all-btn">
+                <button
+                  class="delete-all-btn"
+                  id="delete-all-btn"
+                  data-i18n="deleteAllRecordsButton"
+                >
                   전체 기록 삭제
                 </button>
               </div>
-              <div class="delete-all-info">
+              <div class="delete-all-info" data-i18n="deleteAllInfo">
                 모든 탭 활동 기록이 영구적으로 삭제됩니다. 복구할 수 없습니다.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 언어 설정 섹션 -->
+        <div class="language-settings-section" id="language-settings-section">
+          <div class="language-settings-header">
+            <div class="language-settings-title">
+              🌍 <span data-i18n="languageSettings">언어 설정</span>
+            </div>
+            <div
+              class="language-settings-subtitle"
+              data-i18n="changeExtensionLanguage"
+            >
+              확장 프로그램의 언어를 변경할 수 있습니다
+            </div>
+          </div>
+
+          <div class="language-settings-content">
+            <div class="language-selector">
+              <label
+                for="language-select-stats"
+                class="language-label"
+                data-i18n="selectLanguageLabel"
+                >언어 선택:</label
+              >
+              <select id="language-select-stats" class="language-select">
+                <option value="en">🇺🇸 English</option>
+                <option value="ko">🇰🇷 한국어</option>
+                <option value="ja">🇯🇵 日本語</option>
+              </select>
+            </div>
+            <div class="language-info">
+              <div class="current-language-display">
+                <span data-i18n="currentLanguage">현재 언어:</span>
+                <span id="current-language-display">한국어</span>
+              </div>
+              <div class="language-description" data-i18n="languageDescription">
+                브라우저 언어 설정에 따라 자동으로 선택됩니다. 수동으로 변경할
+                수도 있습니다.
               </div>
             </div>
           </div>
@@ -292,11 +432,20 @@
     </div>
 
     <!-- Floating 새로고침 버튼 -->
-    <button class="floating-refresh-btn" id="refresh-data" title="새로고침">
-      <img src="images/normal.png" alt="새로고침" id="refresh-btn-image" />
+    <button
+      class="floating-refresh-btn"
+      id="refresh-data"
+      data-i18n-title="refresh"
+    >
+      <img
+        src="images/normal.png"
+        data-i18n-alt="refresh"
+        id="refresh-btn-image"
+      />
     </button>
 
     <!-- 번들된 스크립트들 (webpack이 자동으로 순서 조정) -->
+    <script src="i18n.js"></script>
     <script src="vendors.js"></script>
     <script src="stats.js"></script>
   </body>

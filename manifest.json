@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "TabbyMansion",
-  "short_name": "TabbyMansion",
+  "name": "__MSG_extName__",
+  "short_name": "__MSG_extShortName__",
   "version": "1.0",
-  "description": "Focus session timer with tab activity tracking for deep work and coding tests",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "permissions": ["storage", "tabs", "activeTab", "windows"],
   "background": {
     "service_worker": "background.js"
@@ -28,7 +29,9 @@
         "common.css",
         "popup.css",
         "stats.css",
-        "style.css"
+        "style.css",
+        "i18n.js",
+        "_locales/*"
       ],
       "matches": ["<all_urls>"]
     }

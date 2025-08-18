@@ -2,6 +2,17 @@
 // 필요한 date-fns 함수들만 부분 import
 // Debug 유틸리티 import
 import { debug } from "./debug.js";
+
+// 새로운 유틸리티 import
+import { appState, applyI18n } from "./utils/state.js";
+import {
+  fmtDurationHM,
+  fmtDurationSec,
+  fmtDateRange,
+  fmtTimeListDate,
+  fmtSiteListDate,
+} from "./utils/datetime.js";
+
 import {
   format,
   startOfDay,
@@ -16,7 +27,30 @@ import {
   isWithinInterval,
   parseISO,
 } from "date-fns";
-import { ko } from "date-fns/locale";
+import { ko, ja, enUS } from "date-fns/locale";
+
+// date-fns를 전역으로 노출
+if (typeof window !== "undefined") {
+  window.dateFns = {
+    format,
+    formatInTimeZone,
+    toZonedTime,
+    fromZonedTime,
+    getTimezoneOffset,
+    startOfDay,
+    endOfDay,
+    startOfWeek,
+    endOfWeek,
+    startOfMonth,
+    endOfMonth,
+    differenceInMinutes,
+    differenceInHours,
+    differenceInDays,
+    isWithinInterval,
+    parseISO,
+  };
+  window.dateFnsLocales = { ko, ja, enUS };
+}
 
 // date-fns-tz에서 필요한 함수들만 부분 import
 import {
@@ -68,6 +102,14 @@ console.log(
 );
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // 상태 초기화
+  await appState.initialize();
+
+  // i18n 초기화 보장
+  if (typeof i18n !== "undefined") {
+    await i18n.initialize();
+  }
+
   // =========================================================================
   // DOM 요소들
   // =========================================================================
@@ -81,7 +123,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const startTimeEl = document.getElementById("start-time");
   const endTimeEl = document.getElementById("end-time");
   const timezoneSelectEl = document.getElementById("timezone-select");
-  const timeRangeDisplayEl = document.getElementById("time-range-display");
   const applyFilterBtn = document.getElementById("apply-filter");
   const siteFilterEl = document.getElementById("site-filter");
 
@@ -159,7 +200,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       "start-time",
       "end-time",
       "timezone-select",
-      "time-range-display",
       "apply-filter",
       "site-filter",
       "view-daily",
@@ -184,19 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /** 시간 포맷팅 */
-  function formatDuration(seconds) {
-    if (!Number.isFinite(seconds)) return "0초";
-    if (seconds < 60) return `${Math.round(seconds)}초`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)}분`;
-    const h = Math.floor(seconds / 3600);
-    let m = Math.round((seconds - h * 3600) / 60);
-    let H = h;
-    if (m === 60) {
-      H += 1;
-      m = 0;
-    }
-    return `${H}시간 ${m}분`;
-  }
+  // 기존 formatDuration 함수 제거 - utils/datetime.js의 fmtDurationSec 사용
 
   /** 날짜 포맷팅 - 인풋 value용(yyyy-MM-dd) */
   function formatDateForInputTZ(date, tz) {
@@ -206,29 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return formatInTimeZone(date, tz, "yyyy-MM-dd");
   }
 
-  /** TZ에 맞춘 라벨 포맷 */
-  function formatDateLabel(date, view) {
-    try {
-      if (!date || isNaN(date.getTime())) return "Invalid Date";
-      const options = { timeZone: currentTimezone };
-      switch (view) {
-        case "hourly":
-          return `${date.toLocaleDateString(currentLocale, options)} ${String(
-            date.getHours()
-          ).padStart(2, "0")}:00`;
-        case "weekly":
-          // 주 시작일 라벨
-          const weekStart = new Date(date);
-          weekStart.setDate(date.getDate() - date.getDay());
-          return weekStart.toLocaleDateString(currentLocale, options);
-        default:
-          return date.toLocaleDateString(currentLocale, options);
-      }
-    } catch (e) {
-      console.error("Error in formatDateLabel:", e, date, view);
-      return "Invalid Date";
-    }
-  }
+  // 기존 formatDateLabel 함수 제거 - utils/datetime.js의 fmtTimeListDate 사용
 
   // =========================================================================
   // 데이터 로딩 및 필터링
@@ -586,15 +592,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   function updateStatsTodayDate() {
-    const el = document.getElementById("stats-today-date");
-    if (el) {
-      const options = {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        weekday: "long",
-      };
-      el.textContent = `📅 ${new Date().toLocaleDateString("ko-KR", options)}`;
+    // i18n 유틸에서 처리하도록 위임
+    if (typeof i18n !== "undefined" && i18n.updateDateFormatElements) {
+      i18n.updateDateFormatElements();
     }
   }
 
@@ -766,35 +766,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     const openWindows = await getOpenWindowsCount();
     const openTabs = await getOpenTabsCount();
 
-    totalTimeEl.textContent = formatDuration(safeTotalSeconds);
-    totalSitesEl.textContent = `${uniqueSites}개`;
-    totalSessionsEl.textContent = `${totalSessions}회`;
-    currentSessionsEl.textContent = `${openWindows}개 창, ${openTabs}개 탭`;
+    totalTimeEl.textContent = fmtDurationSec(safeTotalSeconds);
+    // i18n을 사용한 단위 포맷팅 (Chrome i18n 형식)
+    const windowsUnit = i18n.getMessage("windows") || "개 창";
+    const tabsUnit = i18n.getMessage("tabs") || "개 탭";
 
-    const startStr = formatInTimeZone(
+    totalSitesEl.textContent =
+      i18n.getMessage("countItems", { count: uniqueSites }) ||
+      `${uniqueSites}개`;
+    totalSessionsEl.textContent =
+      i18n.getMessage("countSessions", { count: totalSessions }) ||
+      `${totalSessions}회`;
+    currentSessionsEl.textContent = `${openWindows}${windowsUnit}, ${openTabs}${tabsUnit}`;
+
+    // 새로운 유틸리티를 사용하여 날짜 범위 표시
+    resultsPeriod.textContent = fmtDateRange(
       currentFilters.startDate,
-      currentTimezone,
-      "yyyy년 MM월 dd일"
-    );
-    const endStr = formatInTimeZone(
       currentFilters.endDate,
-      currentTimezone,
-      "yyyy년 MM월 dd일"
+      appState.getTimezone(),
+      appState.getLanguage(),
+      true
     );
-
-    const today = new Date();
-    const isToday =
-      startStr === endStr &&
-      formatInTimeZone(today, currentTimezone, "yyyy년 MM월 dd일") === startStr;
-
-    resultsPeriod.textContent = isToday
-      ? `${startStr} (오늘)`
-      : `${startStr} ~ ${endStr}`;
 
     updateCharts();
     updateTimeList();
     updateTimeline();
     updateSiteList();
+
+    // 동적 콘텐츠 갱신 후 i18n 재적용 (DOM 렌더링 완료 보장)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (typeof i18n !== "undefined") {
+          i18n.updatePageText();
+          // data-i18n-format 요소도 강제 업데이트
+          i18n.updateDateFormatElements();
+        }
+      }, 50);
+    });
 
     resultsSection.style.display = "block";
     resultsSection.classList.add("show");
@@ -811,13 +819,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       distributionChart = null;
     }
     resultsSection.style.display = "none";
+    const noDataTitle = i18n.getMessage("noDataTitle") || "데이터가 없습니다";
+    const noDataMessage =
+      i18n.getMessage("noDataMessage") ||
+      "선택한 기간에 탭 활동 데이터가 없습니다.<br>다른 기간을 선택하거나 탭 추적을 활성화해주세요.";
+
     const noDataHtml = `
       <div class="no-data">
         <div class="no-data-icon">📊</div>
-        <div class="no-data-title">데이터가 없습니다</div>
+        <div class="no-data-title">${noDataTitle}</div>
         <div class="no-data-message">
-          선택한 기간에 탭 활동 데이터가 없습니다.<br>
-          다른 기간을 선택하거나 탭 추적을 활성화해주세요.
+          ${noDataMessage}
         </div>
       </div>`;
     timelineContainer.innerHTML = noDataHtml;
@@ -830,18 +842,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 기타 유틸
   // =========================================================================
   function updateTimeRangeDisplay() {
-    if (!timeRangeDisplayEl) return;
-    const startStr = formatInTimeZone(
-      new Date(`${startDateEl.value}T${startTimeEl?.value || "00:00"}:00`),
-      currentTimezone,
-      "yyyy년 MM월 dd일 HH:mm"
-    );
-    const endStr = formatInTimeZone(
-      new Date(`${endDateEl.value}T${endTimeEl?.value || "23:59"}:59`),
-      currentTimezone,
-      "yyyy년 MM월 dd일 HH:mm"
-    );
-    timeRangeDisplayEl.textContent = `${startStr} ~ ${endStr}`;
+    // 이 함수는 현재 사용되지 않으므로 제거하거나 필요시 i18n을 사용하도록 수정
   }
 
   function showLoading(show) {
@@ -923,7 +924,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 라벨은 dateMs(UTC epoch)로 안전 생성
     const labels = aggregatedData.map(item =>
-      formatDateLabel(new Date(item.dateMs), currentView)
+      fmtTimeListDate(
+        new Date(item.dateMs),
+        currentView,
+        appState.getTimezone(),
+        appState.getLanguage()
+      )
     );
     const minutes = aggregatedData.map(item => item.totalSeconds / 60);
     const maxVal = Math.max(0, ...minutes);
@@ -936,7 +942,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         labels,
         datasets: [
           {
-            label: "사용 시간 (분)",
+            label: getMessage("usageTimeMinutes") || "사용 시간 (분)",
             data: minutes,
             borderColor: "rgba(255, 215, 0, 1)",
             backgroundColor:
@@ -965,10 +971,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             bodyColor: "#fff",
             callbacks: {
               label(ctx) {
-                const m = ctx.parsed.y || 0;
-                const h = Math.floor(m / 60);
-                const mm = Math.round(m % 60);
-                return `${h}시간 ${mm}분`;
+                const minutes = ctx.parsed.y || 0;
+                return fmtDurationHM(minutes);
               },
             },
           },
@@ -985,16 +989,29 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ? { stepSize: Math.max(1, Math.ceil(maxVal / 8)) }
                 : {}),
               callback(value) {
-                const m = value;
-                const h = Math.floor(m / 60);
-                const mm = Math.round(m % 60);
-                return h > 0 ? `${h}시간 ${mm}분` : `${mm}분`;
+                const minutes = value;
+                return fmtDurationHM(minutes);
               },
             },
           },
           x: {
             grid: { color: "rgba(255,255,255,0.1)" },
-            ticks: { color: "rgba(255,255,255,0.8)", maxRotation: 45 },
+            ticks: {
+              color: "rgba(255,255,255,0.8)",
+              maxRotation: 45,
+              callback(value, index) {
+                // aggregatedData에서 실제 날짜 데이터 사용
+                if (aggregatedData && aggregatedData[index]) {
+                  return fmtTimeListDate(
+                    new Date(aggregatedData[index].dateMs),
+                    currentView,
+                    appState.getTimezone(),
+                    appState.getLanguage()
+                  );
+                }
+                return "";
+              },
+            },
           },
         },
       },
@@ -1156,14 +1173,13 @@ document.addEventListener("DOMContentLoaded", async () => {
               bodyColor: "#fff",
               callbacks: {
                 label(ctx) {
-                  const m = ctx.parsed || 0;
-                  const h = Math.floor(m / 60),
-                    mm = Math.round(m % 60);
+                  const minutes = ctx.parsed || 0;
                   const pct = (
-                    (m / data.reduce((a, b) => a + b, 0)) *
+                    (minutes / data.reduce((a, b) => a + b, 0)) *
                     100
                   ).toFixed(1);
-                  return `${ctx.label}: ${h}시간 ${mm}분 (${pct}%)`;
+                  const timeText = fmtDurationHM(minutes);
+                  return `${ctx.label}: ${timeText} (${pct}%)`;
                 },
               },
             },
@@ -1537,12 +1553,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let html = "";
     for (const g of groups) {
-      const label = formatDateLabel(new Date(g.dateMs), currentView);
+      const label = fmtTimeListDate(
+        new Date(g.dateMs),
+        currentView,
+        appState.getTimezone(),
+        appState.getLanguage()
+      );
       html += `
         <div class="time-list-item">
           <div class="time-list-date">${esc(label)}</div>
           <div class="time-list-duration">${esc(
-            formatDuration(g.totalSeconds)
+            fmtDurationSec(g.totalSeconds)
           )}</div>
         </div>`;
     }
@@ -1562,20 +1583,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let html = `
       <div class="timeline-day">
-        <div class="day-header">조회 기간 내 접속 페이지 목록</div>
-        <div class="day-summary">총 ${sortedDesc.length}개 페이지 | 시간 순 정렬</div>
+        <div class="day-header" data-i18n="listOfAccessedPages">조회 기간 내 접속 페이지 목록</div>
+        <div class="day-summary" data-i18n="totalPages" data-count="${sortedDesc.length}">총 ${sortedDesc.length}개 페이지</div>
     `;
 
     sortedDesc.forEach((rec, displayIndex) => {
       const idxAsc = indexMap.get(rec);
       const sec = getEstimatedTimeInSeconds(rec, idxAsc, filteredData);
-      const visitTime = new Date(rec.timestamp).toLocaleString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      // 새로운 유틸리티를 사용하여 날짜 형식 표시
+      const visitTime = fmtSiteListDate(
+        new Date(rec.timestamp),
+        appState.getTimezone(),
+        appState.getLanguage()
+      );
 
       // URL 표시 축약
       let dispUrl = rec.url || "";
@@ -1618,13 +1638,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="site-time"><span class="visit-time">${esc(
             visitTime
           )}</span> | <span class="duration">${esc(
-        formatDuration(sec)
+        fmtDurationSec(sec)
       )}</span></div>
         </div>`;
     });
 
     html += "</div>";
     timelineContainer.innerHTML = html;
+
+    // 동적으로 생성된 HTML에 다국어 적용
+    if (typeof i18n !== "undefined" && i18n.updatePageText) {
+      i18n.updatePageText();
+    }
 
     // 검색
     const searchInput = document.getElementById("timeline-search");
@@ -1650,18 +1675,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
         let tmp = `
           <div class="timeline-day">
-            <div class="day-header">조회 기간 내 접속 페이지 목록</div>
-            <div class="day-summary">총 ${sortedTmp.length}개 페이지 | 시간 순 정렬</div>
+            <div class="day-header" data-i18n="listOfAccessedPages">조회 기간 내 접속 페이지 목록</div>
+            <div class="day-summary" data-i18n="totalPages" data-count="${sortedTmp.length}">총 ${sortedTmp.length}개 페이지</div>
         `;
         sortedTmp.forEach((rec, i) => {
           const iAsc = idxMap.get(rec);
           const sec = getEstimatedTimeInSeconds(rec, iAsc, filteredData);
-          const vt = new Date(rec.timestamp).toLocaleString("ko-KR", {
+          const vt = new Date(rec.timestamp).toLocaleString(locale, {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
+            hour12: currentLanguage !== "en",
           });
           const title = rec.title || "";
           const td = title.length > 40 ? title.substring(0, 37) + "..." : title;
@@ -1699,12 +1725,17 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div class="site-time"><span class="visit-time">${esc(
                 vt
               )}</span> | <span class="duration">${esc(
-            formatDuration(sec)
+            fmtDurationSec(sec)
           )}</span></div>
             </div>`;
         });
         tmp += "</div>";
         timelineContainer.innerHTML = tmp;
+
+        // 검색 결과에도 다국어 적용
+        if (typeof i18n !== "undefined" && i18n.updatePageText) {
+          i18n.updatePageText();
+        }
       };
     }
   }
@@ -1839,7 +1870,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div class="site-domain">${esc(domain)}</div>
             </div>
             <div class="site-time">${esc(
-              formatDuration(seconds)
+              fmtDurationSec(seconds)
             )} <span class="site-percentage">(${pct}%)</span></div>
           </div>`;
       });
@@ -1961,6 +1992,115 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================================================================
+  // 언어 설정 함수들
+  // =========================================================================
+  function setupLanguageSettings() {
+    const languageSelect = document.getElementById("language-select-stats");
+    const currentLanguageDisplay = document.getElementById(
+      "current-language-display"
+    );
+
+    if (!languageSelect || !currentLanguageDisplay) {
+      console.warn("Language settings elements not found");
+      return;
+    }
+
+    // 현재 언어 로드 및 표시
+    loadCurrentLanguage();
+
+    // 언어 변경 이벤트 리스너
+    languageSelect.addEventListener("change", async e => {
+      const newLanguage = e.target.value;
+      await changeLanguage(newLanguage);
+    });
+  }
+
+  async function loadCurrentLanguage() {
+    try {
+      const result = await chrome.storage.local.get(["language"]);
+      const currentLanguage = result.language || i18n.getCurrentLanguage();
+
+      const languageSelect = document.getElementById("language-select-stats");
+      const currentLanguageDisplay = document.getElementById(
+        "current-language-display"
+      );
+
+      if (languageSelect) {
+        languageSelect.value = currentLanguage;
+      }
+
+      if (currentLanguageDisplay) {
+        const languageNames = {
+          en: "English",
+          ko: "한국어",
+          ja: "日本語",
+        };
+        currentLanguageDisplay.textContent =
+          languageNames[currentLanguage] || currentLanguage;
+      }
+    } catch (error) {
+      console.error("언어 설정 로드 실패:", error);
+    }
+  }
+
+  async function changeLanguage(newLanguage) {
+    try {
+      // 언어 설정 저장
+      await chrome.storage.local.set({ language: newLanguage });
+
+      // 현재 언어 표시 업데이트
+      await loadCurrentLanguage();
+
+      // 성공 메시지 표시
+      showLanguageChangeMessage(newLanguage);
+
+      // 페이지 새로고침으로 언어 변경 적용
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error("언어 변경 실패:", error);
+      alert("언어 변경 중 오류가 발생했습니다.");
+    }
+  }
+
+  function showLanguageChangeMessage(language) {
+    const languageNames = {
+      en: "English",
+      ko: "한국어",
+      ja: "日本語",
+    };
+
+    const message = `언어가 ${languageNames[language]}로 변경되었습니다. 페이지가 새로고침됩니다.`;
+
+    // 메시지 요소 생성
+    const messageEl = document.createElement("div");
+    messageEl.className = "language-change-message";
+    messageEl.textContent = message;
+    messageEl.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: #27ae60;
+      color: white;
+      font-size: 14px;
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    `;
+
+    document.body.appendChild(messageEl);
+
+    // 3초 후 제거
+    setTimeout(() => {
+      if (messageEl.parentNode) {
+        messageEl.remove();
+      }
+    }, 3000);
+  }
+
+  // =========================================================================
   // 초기화
   // =========================================================================
   if (!validateDOMElements()) {
@@ -1970,5 +2110,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   setupEventListeners();
+  setupLanguageSettings(); // 언어 설정 초기화 추가
   initializePage();
 });

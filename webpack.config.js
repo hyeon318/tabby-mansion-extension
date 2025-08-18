@@ -1,5 +1,6 @@
 const path = require("path");
 const TerserPlugin = require("terser-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 // 개발 환경 감지
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -84,4 +85,24 @@ module.exports = {
     maxEntrypointSize: 512000,
     maxAssetSize: 512000,
   },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: "_locales", to: "_locales" },
+        { from: "manifest.json", to: "manifest.json" },
+        { from: "popup.html", to: "popup.html" },
+        { from: "stats.html", to: "stats.html" },
+
+        { from: "common.css", to: "common.css" },
+        { from: "popup.css", to: "popup.css" },
+        { from: "stats.css", to: "stats.css" },
+
+        { from: "style.css", to: "style.css" },
+        { from: "i18n.js", to: "i18n.js" },
+        { from: "background.js", to: "background.js" },
+        { from: "content.js", to: "content.js" },
+        { from: "public", to: "public" },
+      ],
+    }),
+  ],
 };

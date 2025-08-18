@@ -1,0 +1,535 @@
+{
+  "extName": {
+    "message": "TabbyMansion",
+    "description": "Extension name"
+  },
+  "extShortName": {
+    "message": "TabbyMansion",
+    "description": "Extension short name"
+  },
+  "extDescription": {
+    "message": "集中作業とコーディングテストのためのタイマーとタブ活動追跡ツール",
+    "description": "Extension description"
+  },
+  "sharedTimer": {
+    "message": "共有タイマー",
+    "description": "Shared timer section title"
+  },
+  "start": {
+    "message": "開始",
+    "description": "Start button text"
+  },
+  "pause": {
+    "message": "一時停止",
+    "description": "Pause button text"
+  },
+  "reset": {
+    "message": "リセット",
+    "description": "Reset button text"
+  },
+  "timerLabel": {
+    "message": "タイマーラベル（任意）",
+    "description": "Timer label input placeholder"
+  },
+  "stopwatchTimer": {
+    "message": "ストップウォッチタイマー",
+    "description": "Stopwatch timer control label"
+  },
+  "stopwatchDescription": {
+    "message": "画面上にフローティングタイマーを表示",
+    "description": "Stopwatch timer description"
+  },
+  "tabActivityTracking": {
+    "message": "タブ活動追跡",
+    "description": "Tab tracking control label"
+  },
+  "tabTrackingDescription": {
+    "message": "アクティブタブの切り替え記録を保存",
+    "description": "Tab tracking description"
+  },
+  "siteUsageStats": {
+    "message": "サイト使用統計",
+    "description": "Statistics section title"
+  },
+  "chart": {
+    "message": "チャート",
+    "description": "Chart view button"
+  },
+  "log": {
+    "message": "ログ",
+    "description": "Log view button"
+  },
+  "details": {
+    "message": "詳細",
+    "description": "Details button"
+  },
+  "focusWorkTimer": {
+    "message": "集中作業のためのタイマー＆タブ追跡ツール",
+    "description": "Main subtitle"
+  },
+  "detailedStats": {
+    "message": "詳細統計",
+    "description": "Detailed statistics page title"
+  },
+  "siteUsagePatternAnalysis": {
+    "message": "サイト使用パターン分析と時間管理インサイト",
+    "description": "Detailed stats subtitle"
+  },
+  "realTimeUpdate": {
+    "message": "リアルタイム更新",
+    "description": "Real-time update indicator"
+  },
+  "queryConditions": {
+    "message": "クエリ条件",
+    "description": "Filter section title"
+  },
+  "timezoneAndLanguage": {
+    "message": "タイムゾーン＆言語",
+    "description": "Timezone and language filter label"
+  },
+  "korea": {
+    "message": "🇰🇷 韓国 (KST)",
+    "description": "Korea timezone option"
+  },
+  "uk": {
+    "message": "🇬🇧 イギリス (GMT/BST)",
+    "description": "UK timezone option"
+  },
+  "newYork": {
+    "message": "🇺🇸 ニューヨーク (EST/EDT)",
+    "description": "New York timezone option"
+  },
+  "losAngeles": {
+    "message": "🇺🇸 ロサンゼルス (PST/PDT)",
+    "description": "Los Angeles timezone option"
+  },
+  "berlin": {
+    "message": "🇩🇪 ベルリン (CET/CEST)",
+    "description": "Berlin timezone option"
+  },
+  "queryPeriod": {
+    "message": "クエリ期間",
+    "description": "Query period filter label"
+  },
+  "startDate": {
+    "message": "開始日",
+    "description": "Start date input placeholder"
+  },
+  "startTime": {
+    "message": "開始時刻",
+    "description": "Start time input placeholder"
+  },
+  "endDate": {
+    "message": "終了日",
+    "description": "End date input placeholder"
+  },
+  "endTime": {
+    "message": "終了時刻",
+    "description": "End time input placeholder"
+  },
+  "siteFilter": {
+    "message": "サイトフィルター",
+    "description": "Site filter label"
+  },
+  "allSites": {
+    "message": "全サイト",
+    "description": "All sites option"
+  },
+  "analysisUnit": {
+    "message": "分析単位",
+    "description": "Analysis unit filter label"
+  },
+  "daily": {
+    "message": "日間",
+    "description": "Daily view option"
+  },
+  "hourly": {
+    "message": "時間別",
+    "description": "Hourly view option"
+  },
+  "weekly": {
+    "message": "週間",
+    "description": "Weekly view option"
+  },
+  "applyFilter": {
+    "message": "フィルター適用",
+    "description": "Apply filter button"
+  },
+  "resetFilter": {
+    "message": "フィルターリセット",
+    "description": "Reset filter button"
+  },
+  "refreshData": {
+    "message": "データ更新",
+    "description": "Refresh data button"
+  },
+  "exportData": {
+    "message": "データエクスポート",
+    "description": "Export data button"
+  },
+  "totalTime": {
+    "message": "総時間",
+    "description": "Total time label"
+  },
+  "totalSites": {
+    "message": "総サイト数",
+    "description": "Total sites label"
+  },
+  "totalSessions": {
+    "message": "総セッション数",
+    "description": "Total sessions label"
+  },
+  "currentSessions": {
+    "message": "現在のセッション",
+    "description": "Current sessions label"
+  },
+  "deleteDate": {
+    "message": "削除する日付",
+    "description": "Delete date input placeholder"
+  },
+  "deleteDateBtn": {
+    "message": "日付削除",
+    "description": "Delete date button"
+  },
+  "deleteAll": {
+    "message": "全削除",
+    "description": "Delete all button"
+  },
+  "settings": {
+    "message": "設定",
+    "description": "Settings page title"
+  },
+  "languageSettings": {
+    "message": "言語設定",
+    "description": "Language settings section title"
+  },
+  "selectLanguage": {
+    "message": "言語選択:",
+    "description": "Language selection label"
+  },
+  "languageDescription": {
+    "message": "ブラウザの言語設定に基づいて自動選択されます。手動で変更することもできます。",
+    "description": "Language setting description"
+  },
+  "timerSettings": {
+    "message": "タイマー設定",
+    "description": "Timer settings section title"
+  },
+  "autoStartTimer": {
+    "message": "ページ読み込み時にタイマーを自動開始",
+    "description": "Auto-start timer checkbox label"
+  },
+  "showNotifications": {
+    "message": "タイマー通知を表示",
+    "description": "Show notifications checkbox label"
+  },
+  "dataManagement": {
+    "message": "データ管理",
+    "description": "Data management section title"
+  },
+  "importData": {
+    "message": "データインポート",
+    "description": "Import data button"
+  },
+  "clearAllData": {
+    "message": "全データ削除",
+    "description": "Clear all data button"
+  },
+  "dataDescription": {
+    "message": "すべてのタイマー記録とサイト使用統計を削除します。この操作は元に戻せません。",
+    "description": "Data management description"
+  },
+  "about": {
+    "message": "情報",
+    "description": "About section title"
+  },
+  "version": {
+    "message": "バージョン:",
+    "description": "Version label"
+  },
+  "currentLanguage": {
+    "message": "現在の言語:",
+    "description": "Current language label"
+  },
+
+  "queryResults": {
+    "message": "クエリ結果",
+    "description": "Query results section title"
+  },
+  "totalUsageTime": {
+    "message": "総使用時間",
+    "description": "Total usage time label"
+  },
+  "visitedSites": {
+    "message": "訪問サイト",
+    "description": "Visited sites label"
+  },
+  "timeUsageTrend": {
+    "message": "期間別使用時間推移",
+    "description": "Time usage trend chart title"
+  },
+  "checkHourlyPattern": {
+    "message": "時間帯別使用パターンを確認してください",
+    "description": "Time chart subtitle"
+  },
+  "hourlyUsageList": {
+    "message": "時間別使用時間リスト",
+    "description": "Hourly usage list title"
+  },
+  "siteUsageDistribution": {
+    "message": "サイト別使用時間分布",
+    "description": "Site usage distribution chart title"
+  },
+  "checkMostUsedSites": {
+    "message": "最も使用したサイトを確認してください",
+    "description": "Distribution chart subtitle"
+  },
+  "siteDetailedInfo": {
+    "message": "サイト別詳細情報",
+    "description": "Site detailed info title"
+  },
+  "detailedDataList": {
+    "message": "詳細データリスト",
+    "description": "Detailed data list title"
+  },
+  "searchTitleDomainAddress": {
+    "message": "タイトル/ドメイン/アドレス検索",
+    "description": "Timeline search placeholder"
+  },
+  "deleteOrResetRecords": {
+    "message": "特定の日付の記録を削除するか、すべての記録をリセットできます",
+    "description": "Data management subtitle"
+  },
+  "deleteByDate": {
+    "message": "日付別記録削除",
+    "description": "Delete by date section title"
+  },
+  "selectDateToDelete": {
+    "message": "削除する日付を選択",
+    "description": "Delete date input placeholder"
+  },
+  "deleteSelectedDateRecords": {
+    "message": "選択した日付の記録を削除",
+    "description": "Delete selected date button"
+  },
+  "deleteDateInfo": {
+    "message": "選択した日付のすべてのタブ活動記録が削除されます。",
+    "description": "Delete date info"
+  },
+  "deleteAllRecords": {
+    "message": "全記録削除",
+    "description": "Delete all records section title"
+  },
+  "deleteAllRecordsButton": {
+    "message": "全記録削除",
+    "description": "Delete all records button"
+  },
+  "deleteAllInfo": {
+    "message": "すべてのタブ活動記録が永続的に削除されます。復元できません。",
+    "description": "Delete all info"
+  },
+  "loadingData": {
+    "message": "データを読み込み中...",
+    "description": "Loading data message"
+  },
+  "noData": {
+    "message": "データなし",
+    "description": "No data message"
+  },
+  "today": {
+    "message": "今日",
+    "description": "Today label"
+  },
+  "dateFormat": {
+    "message": "yyyy-MM-dd",
+    "description": "Date format for display"
+  },
+  "listOfAccessedPages": {
+    "message": "クエリ期間内のアクセスページ一覧",
+    "description": "Detailed data list subtitle"
+  },
+  "totalPages": {
+    "message": "総{count}ページ",
+    "description": "Total pages count with dynamic number"
+  },
+  "sortedByTime": {
+    "message": "時間順ソート",
+    "description": "Sort order description"
+  },
+  "changeExtensionLanguage": {
+    "message": "拡張機能の言語を変更できます。",
+    "description": "Language settings subtitle"
+  },
+  "selectLanguageLabel": {
+    "message": "言語選択:",
+    "description": "Language selection label"
+  },
+  "yearMonthDay": {
+    "message": "年-月-日",
+    "description": "Date input placeholder format"
+  },
+  "usageTimeMinutes": {
+    "message": "使用時間 (分)",
+    "description": "Chart dataset label for usage time"
+  },
+  "hoursMinutes": {
+    "message": "{hours}時間 {minutes}分",
+    "description": "Time format with hours and minutes"
+  },
+  "minutesOnly": {
+    "message": "{minutes}分",
+    "description": "Time format with minutes only"
+  },
+  "unknown": {
+    "message": "不明",
+    "description": "Unknown domain or site"
+  },
+  "todayLabel": {
+    "message": "(今日)",
+    "description": "Today label for date display"
+  },
+  "dateRangeSeparator": {
+    "message": " ~ ",
+    "description": "Date range separator"
+  },
+  "noLogsMessage": {
+    "message": "タブ追跡が無効になっています",
+    "description": "Message when tab tracking is disabled"
+  },
+  "pageTitle": {
+    "message": "TabbyMansion - 詳細統計",
+    "description": "Stats page title"
+  },
+  "pageDescription": {
+    "message": "TabbyMansion - サイト使用統計と時間管理インサイト",
+    "description": "Stats page meta description"
+  },
+  "dateFullWithToday": {
+    "message": "EEEE, yyyy年 M月 d日",
+    "description": "Date format with day of week for today display"
+  },
+  "dateFull": {
+    "message": "yyyy年 M月 d日",
+    "description": "Full date format"
+  },
+  "ttTotalUsageTime": {
+    "message": "選択した期間にすべてのサイトで費やした総時間です。タブ切り替え時点を基準に計算されます。",
+    "description": "Tooltip for total usage time"
+  },
+  "ttVisitedSites": {
+    "message": "選択した期間に訪問したユニークなドメイン数です。同じサイトの異なるページは1つとして集計されます。",
+    "description": "Tooltip for visited sites"
+  },
+  "ttTotalSessions": {
+    "message": "タブをアクティブにした総回数です。タブ切り替えごとに新しいセッションとしてカウントされます。",
+    "description": "Tooltip for total sessions"
+  },
+  "ttCurrentSessions": {
+    "message": "現在のクエリ期間内でアクティブにされたタブの総回数です。タブ切り替えごとに新しいセッションとしてカウントされます。",
+    "description": "Tooltip for current sessions"
+  },
+  "refresh": {
+    "message": "更新",
+    "description": "Refresh button text"
+  },
+  "tzKorea": {
+    "message": "🇰🇷 韓国 (KST)",
+    "description": "Korea timezone option"
+  },
+  "tzUK": {
+    "message": "🇬🇧 イギリス (GMT/BST)",
+    "description": "UK timezone option"
+  },
+  "tzNewYork": {
+    "message": "🇺🇸 ニューヨーク (EST/EDT)",
+    "description": "New York timezone option"
+  },
+  "tzLosAngeles": {
+    "message": "🇺🇸 ロサンゼルス (PST/PDT)",
+    "description": "Los Angeles timezone option"
+  },
+  "tzBerlin": {
+    "message": "🇩🇪 ベルリン (CET/CEST)",
+    "description": "Berlin timezone option"
+  },
+  "seconds": {
+    "message": "秒",
+    "description": "Seconds unit"
+  },
+  "minutes": {
+    "message": "分",
+    "description": "Minutes unit"
+  },
+  "hours": {
+    "message": "時間",
+    "description": "Hours unit"
+  },
+  "items": {
+    "message": "個",
+    "description": "Items count unit"
+  },
+  "times": {
+    "message": "回",
+    "description": "Times count unit"
+  },
+  "windows": {
+    "message": "個ウィンドウ",
+    "description": "Windows count unit"
+  },
+  "tabs": {
+    "message": "個タブ",
+    "description": "Tabs count unit"
+  },
+  "chartLabelFormat": {
+    "message": "{label}: {time} ({percentage}%)",
+    "description": "Chart label format with time and percentage"
+  },
+  "timeListDateFormat": {
+    "message": "yyyy年M月d日",
+    "description": "Date format for time list entries"
+  },
+  "timeListHourlyFormat": {
+    "message": "yyyy年M月d日 HH:mm",
+    "description": "Date format for hourly time list entries"
+  },
+  "timeListWeeklyFormat": {
+    "message": "yyyy年M月d日",
+    "description": "Date format for weekly time list entries"
+  },
+  "siteListDateFormat": {
+    "message": "yyyy年M月d日 HH:mm",
+    "description": "Date format for site list entries"
+  },
+  "secondsOnly": {
+    "message": "{seconds}秒",
+    "description": "Time format with seconds only"
+  },
+  "countItems": {
+    "message": "{count}個",
+    "description": "Count format for items"
+  },
+  "countSessions": {
+    "message": "{count}回",
+    "description": "Count format for sessions"
+  },
+  "noDataTitle": {
+    "message": "データがありません",
+    "description": "No data title"
+  },
+  "noDataMessage": {
+    "message": "選択した期間にタブアクティビティデータがありません。<br>別の期間を選択するか、タブ追跡を有効にしてください。",
+    "description": "No data message"
+  },
+  "noLogsToday": {
+    "message": "今日の記録がありません",
+    "description": "No logs today message"
+  },
+  "popupTrackerOffTitle": {
+    "message": "タブ追跡が無効になっています",
+    "description": "Popup tracker off title"
+  },
+  "popupTrackerOffDesc": {
+    "message": "時間追跡を開始するには有効にしてください",
+    "description": "Popup tracker off description"
+  }
+}

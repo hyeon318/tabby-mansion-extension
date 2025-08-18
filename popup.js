@@ -15,6 +15,10 @@ import {
 // Debug 유틸리티 import
 import { debug } from "./debug.js";
 
+// 새로운 유틸리티 import
+import { appState, applyI18n } from "./utils/state.js";
+import { fmtDurationHM, fmtDurationSec } from "./utils/datetime.js";
+
 // 필요한 Chart.js 컴포넌트만 등록
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
@@ -25,6 +29,14 @@ console.log(
 );
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // 상태 초기화
+  await appState.initialize();
+
+  // i18n 초기화 보장
+  if (typeof i18n !== "undefined") {
+    await i18n.initialize();
+  }
+
   const stopwatchToggle = document.getElementById("stopwatch-toggle");
   const tabTrackerToggle = document.getElementById("tab-tracker-toggle");
   const logsContainer = document.getElementById("logs-container");
@@ -84,7 +96,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 차트 및 로그 표시
   await displayStats();
 
-  // 이벤트 리스너 설정
+  // 이벤트 리스너 설정 (DOM 요소들이 준비된 후)
   setupEventListeners();
 
   // 초기 상태 로드
@@ -249,6 +261,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 이벤트 리스너 설정
   function setupEventListeners() {
+    // DOM 요소들이 존재하는지 확인
+    if (!stopwatchToggle || !tabTrackerToggle || !detailBtn) {
+      console.error("필요한 DOM 요소를 찾을 수 없습니다:", {
+        stopwatchToggle: !!stopwatchToggle,
+        tabTrackerToggle: !!tabTrackerToggle,
+        detailBtn: !!detailBtn,
+      });
+      return;
+    }
     // 타이머 버튼 이벤트
     timerStartBtn.addEventListener("click", startTimer);
     timerPauseBtn.addEventListener("click", pauseTimer);
@@ -295,6 +316,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 탭 추적기 토글
     tabTrackerToggle.addEventListener("click", async () => {
+      console.log("탭 추적기 토글 클릭됨");
       const isEnabled = !tabTrackerToggle.classList.contains("active");
       debug.tracker("탭 트래커 토글:", isEnabled);
 
@@ -390,11 +412,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 상세보기 버튼
     detailBtn.addEventListener("click", () => {
-      // 새 탭에서 상세페이지 열기
-      chrome.tabs.create({
-        url: chrome.runtime.getURL("stats.html"),
-        active: true,
-      });
+      console.log("상세보기 버튼 클릭됨");
+      try {
+        // 새 탭에서 상세페이지 열기
+        chrome.tabs.create({
+          url: chrome.runtime.getURL("stats.html"),
+          active: true,
+        });
+      } catch (error) {
+        console.error("상세보기 페이지 열기 실패:", error);
+      }
     });
   }
 
@@ -442,8 +469,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (todayLogs.length === 0) {
         drawEmptyChart();
-        chartLegend.innerHTML =
-          '<div class="no-logs">오늘 사용 통계가 없습니다</div>';
+        const noLogsMessage =
+          i18n.getMessage("noLogsToday") || "오늘 기록이 없습니다";
+        chartLegend.innerHTML = `<div class="no-logs">${noLogsMessage}</div>`;
         return;
       }
 
@@ -474,8 +502,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const todayLogs = filterTodayData(tabLogs);
 
       if (todayLogs.length === 0) {
-        logsContainer.innerHTML =
-          '<div class="no-logs">오늘 기록된 탭 활동이 없습니다</div>';
+        const noLogsMessage =
+          i18n.getMessage("noLogsToday") || "오늘 기록이 없습니다";
+        logsContainer.innerHTML = `<div class="no-logs">${noLogsMessage}</div>`;
         return;
       }
 
@@ -529,9 +558,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
           <span style="font-size: 16px;">⚠️</span>
           <div>
-            <div style="font-weight: bold; margin-bottom: 2px;">탭 트래커 비활성화</div>
+            <div style="font-weight: bold; margin-bottom: 2px;">${
+              i18n.getMessage("popupTrackerOffTitle") ||
+              "탭 추적이 비활성화되어 있습니다"
+            }</div>
             <div style="opacity: 0.9; font-size: 11px;">
-              정확한 사용시간 측정을 위해 탭 트래커를 활성화해주세요
+              ${
+                i18n.getMessage("popupTrackerOffDesc") ||
+                "시간 추적을 시작하려면 활성화해주세요"
+              }
             </div>
           </div>
         </div>
@@ -555,11 +590,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 오늘 날짜 표시
   function updateTodayDate() {
-    const todayDateEl = document.getElementById("today-date");
-    if (todayDateEl) {
-      const today = new Date();
-      const dateString = format(today, "yyyy년 MMMM d일 EEEE", { locale: ko });
-      todayDateEl.textContent = `📅 ${dateString}`;
+    // i18n 유틸에서 처리하도록 위임
+    if (typeof i18n !== "undefined" && i18n.updateDateFormatElements) {
+      i18n.updateDateFormatElements();
     }
   }
 
@@ -807,11 +840,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const dataIndex = context.dataIndex;
                 const item = dataWithPercentages[dataIndex];
                 if (item) {
-                  const minutes = item.timeSpent / 1000 / 60; // 밀리초를 분으로 변환
-                  const hours = Math.floor(minutes / 60);
-                  const mins = Math.round(minutes % 60);
-                  const timeText =
-                    hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`;
+                  const timeText = formatDuration(item.timeSpent);
                   return `${timeText} (${item.percentage}%)`;
                 }
                 return "";
@@ -829,7 +858,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 도메인 정규화 함수 (eTLD+1)
   function normalizeDomain(url) {
-    if (!url) return "알 수 없음";
+    if (!url) return getMessage("unknown") || "알 수 없음";
 
     try {
       const hostname = new URL(
@@ -910,7 +939,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 차트 범례 표시
   function displayChartLegend(siteUsage) {
     if (siteUsage.length === 0) {
-      chartLegend.innerHTML = '<div class="no-logs">사용 통계가 없습니다</div>';
+      const noDataMessage =
+        i18n.getMessage("noDataTitle") || "데이터가 없습니다";
+      chartLegend.innerHTML = `<div class="no-logs">${noDataMessage}</div>`;
       return;
     }
 
@@ -926,7 +957,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             normalizeDomain(site.domain || site.url)
           )}</div>
         </div>
-        <div class="legend-time">${formatTime(site.timeSpent)}</div>
+                        <div class="legend-time">${fmtDurationHM(
+                          site.timeSpent,
+                          true
+                        )}</div>
       </div>
     `
       )
@@ -950,18 +984,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return colors[index % colors.length];
   }
 
-  // 시간 형식화
-  function formatTime(milliseconds) {
-    const seconds = Math.floor(milliseconds / 1000);
-    if (seconds < 60) return `${seconds}초`;
-
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}분`;
-
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}시간 ${remainingMinutes}분`;
-  }
+  // 기존 formatTime 함수 제거 - utils/datetime.js의 fmtDurationHM 사용
 
   // 로그 실시간 업데이트를 위한 스토리지 변경 리스너 - 디바운스 적용
   chrome.storage.onChanged.addListener((changes, namespace) => {

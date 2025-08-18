@@ -1,0 +1,535 @@
+{
+  "extName": {
+    "message": "TabbyMansion",
+    "description": "Extension name"
+  },
+  "extShortName": {
+    "message": "TabbyMansion",
+    "description": "Extension short name"
+  },
+  "extDescription": {
+    "message": "집중 작업과 코딩 테스트를 위한 타이머 및 탭 활동 추적기",
+    "description": "Extension description"
+  },
+  "sharedTimer": {
+    "message": "공유 타이머",
+    "description": "Shared timer section title"
+  },
+  "start": {
+    "message": "시작",
+    "description": "Start button text"
+  },
+  "pause": {
+    "message": "일시정지",
+    "description": "Pause button text"
+  },
+  "reset": {
+    "message": "리셋",
+    "description": "Reset button text"
+  },
+  "timerLabel": {
+    "message": "타이머 라벨 (선택사항)",
+    "description": "Timer label input placeholder"
+  },
+  "stopwatchTimer": {
+    "message": "스톱워치 타이머",
+    "description": "Stopwatch timer control label"
+  },
+  "stopwatchDescription": {
+    "message": "화면에 플로팅 타이머 표시",
+    "description": "Stopwatch timer description"
+  },
+  "tabActivityTracking": {
+    "message": "탭 활동 추적",
+    "description": "Tab tracking control label"
+  },
+  "tabTrackingDescription": {
+    "message": "활성 탭 전환 기록 저장",
+    "description": "Tab tracking description"
+  },
+  "siteUsageStats": {
+    "message": "사이트 사용 통계",
+    "description": "Statistics section title"
+  },
+  "chart": {
+    "message": "차트",
+    "description": "Chart view button"
+  },
+  "log": {
+    "message": "로그",
+    "description": "Log view button"
+  },
+  "details": {
+    "message": "상세보기",
+    "description": "Details button"
+  },
+  "focusWorkTimer": {
+    "message": "집중 작업을 위한 타이머 & 탭 추적기",
+    "description": "Main subtitle"
+  },
+  "detailedStats": {
+    "message": "상세 통계",
+    "description": "Detailed statistics page title"
+  },
+  "siteUsagePatternAnalysis": {
+    "message": "사이트 사용 패턴 분석 및 시간 관리 인사이트",
+    "description": "Detailed stats subtitle"
+  },
+  "realTimeUpdate": {
+    "message": "실시간 업데이트",
+    "description": "Real-time update indicator"
+  },
+  "queryConditions": {
+    "message": "조회 조건",
+    "description": "Filter section title"
+  },
+  "timezoneAndLanguage": {
+    "message": "시간대 및 언어",
+    "description": "Timezone and language filter label"
+  },
+  "korea": {
+    "message": "🇰🇷 한국 (KST)",
+    "description": "Korea timezone option"
+  },
+  "uk": {
+    "message": "🇬🇧 영국 (GMT/BST)",
+    "description": "UK timezone option"
+  },
+  "newYork": {
+    "message": "🇺🇸 뉴욕 (EST/EDT)",
+    "description": "New York timezone option"
+  },
+  "losAngeles": {
+    "message": "🇺🇸 로스앤젤레스 (PST/PDT)",
+    "description": "Los Angeles timezone option"
+  },
+  "berlin": {
+    "message": "🇩🇪 베를린 (CET/CEST)",
+    "description": "Berlin timezone option"
+  },
+  "queryPeriod": {
+    "message": "조회 기간",
+    "description": "Query period filter label"
+  },
+  "startDate": {
+    "message": "시작일",
+    "description": "Start date input placeholder"
+  },
+  "startTime": {
+    "message": "시작 시각",
+    "description": "Start time input placeholder"
+  },
+  "endDate": {
+    "message": "종료일",
+    "description": "End date input placeholder"
+  },
+  "endTime": {
+    "message": "종료 시각",
+    "description": "End time input placeholder"
+  },
+  "siteFilter": {
+    "message": "사이트 필터",
+    "description": "Site filter label"
+  },
+  "allSites": {
+    "message": "전체 사이트",
+    "description": "All sites option"
+  },
+  "analysisUnit": {
+    "message": "분석 단위",
+    "description": "Analysis unit filter label"
+  },
+  "daily": {
+    "message": "일간",
+    "description": "Daily view option"
+  },
+  "hourly": {
+    "message": "시간별",
+    "description": "Hourly view option"
+  },
+  "weekly": {
+    "message": "주간",
+    "description": "Weekly view option"
+  },
+  "applyFilter": {
+    "message": "필터 적용",
+    "description": "Apply filter button"
+  },
+  "resetFilter": {
+    "message": "필터 초기화",
+    "description": "Reset filter button"
+  },
+  "refreshData": {
+    "message": "데이터 새로고침",
+    "description": "Refresh data button"
+  },
+  "exportData": {
+    "message": "데이터 내보내기",
+    "description": "Export data button"
+  },
+  "totalTime": {
+    "message": "총 시간",
+    "description": "Total time label"
+  },
+  "totalSites": {
+    "message": "총 사이트",
+    "description": "Total sites label"
+  },
+  "totalSessions": {
+    "message": "총 세션",
+    "description": "Total sessions label"
+  },
+  "currentSessions": {
+    "message": "현재 세션",
+    "description": "Current sessions label"
+  },
+  "deleteDate": {
+    "message": "삭제할 날짜",
+    "description": "Delete date input placeholder"
+  },
+  "deleteDateBtn": {
+    "message": "날짜 삭제",
+    "description": "Delete date button"
+  },
+  "deleteAll": {
+    "message": "전체 삭제",
+    "description": "Delete all button"
+  },
+  "settings": {
+    "message": "설정",
+    "description": "Settings page title"
+  },
+  "languageSettings": {
+    "message": "언어 설정",
+    "description": "Language settings section title"
+  },
+  "selectLanguage": {
+    "message": "언어 선택:",
+    "description": "Language selection label"
+  },
+  "languageDescription": {
+    "message": "브라우저 언어 설정에 따라 자동으로 선택됩니다. 수동으로 변경할 수도 있습니다.",
+    "description": "Language setting description"
+  },
+  "timerSettings": {
+    "message": "타이머 설정",
+    "description": "Timer settings section title"
+  },
+  "autoStartTimer": {
+    "message": "페이지 로드 시 자동으로 타이머 시작",
+    "description": "Auto-start timer checkbox label"
+  },
+  "showNotifications": {
+    "message": "타이머 알림 표시",
+    "description": "Show notifications checkbox label"
+  },
+  "dataManagement": {
+    "message": "데이터 관리",
+    "description": "Data management section title"
+  },
+  "importData": {
+    "message": "데이터 가져오기",
+    "description": "Import data button"
+  },
+  "clearAllData": {
+    "message": "모든 데이터 삭제",
+    "description": "Clear all data button"
+  },
+  "dataDescription": {
+    "message": "모든 타이머 기록과 사이트 사용 통계를 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+    "description": "Data management description"
+  },
+  "about": {
+    "message": "정보",
+    "description": "About section title"
+  },
+  "version": {
+    "message": "버전:",
+    "description": "Version label"
+  },
+  "currentLanguage": {
+    "message": "현재 언어:",
+    "description": "Current language label"
+  },
+
+  "queryResults": {
+    "message": "조회 결과",
+    "description": "Query results section title"
+  },
+  "totalUsageTime": {
+    "message": "총 사용 시간",
+    "description": "Total usage time label"
+  },
+  "visitedSites": {
+    "message": "방문한 사이트",
+    "description": "Visited sites label"
+  },
+  "timeUsageTrend": {
+    "message": "기간별 사용 시간 추이",
+    "description": "Time usage trend chart title"
+  },
+  "checkHourlyPattern": {
+    "message": "시간대별 사용 패턴을 확인하세요",
+    "description": "Time chart subtitle"
+  },
+  "hourlyUsageList": {
+    "message": "시간별 사용 시간 리스트",
+    "description": "Hourly usage list title"
+  },
+  "siteUsageDistribution": {
+    "message": "사이트별 사용 시간 분포",
+    "description": "Site usage distribution chart title"
+  },
+  "checkMostUsedSites": {
+    "message": "가장 많이 사용한 사이트를 확인하세요",
+    "description": "Distribution chart subtitle"
+  },
+  "siteDetailedInfo": {
+    "message": "사이트별 상세 정보",
+    "description": "Site detailed info title"
+  },
+  "detailedDataList": {
+    "message": "상세 데이터 리스트",
+    "description": "Detailed data list title"
+  },
+  "searchTitleDomainAddress": {
+    "message": "제목/도메인/주소 검색",
+    "description": "Timeline search placeholder"
+  },
+  "deleteOrResetRecords": {
+    "message": "특정 날짜의 기록을 삭제하거나 전체 기록을 초기화할 수 있습니다",
+    "description": "Data management subtitle"
+  },
+  "deleteByDate": {
+    "message": "일자별 기록 삭제",
+    "description": "Delete by date section title"
+  },
+  "selectDateToDelete": {
+    "message": "삭제할 날짜 선택",
+    "description": "Delete date input placeholder"
+  },
+  "deleteSelectedDateRecords": {
+    "message": "선택한 날짜 기록 삭제",
+    "description": "Delete selected date button"
+  },
+  "deleteDateInfo": {
+    "message": "선택한 날짜의 모든 탭 활동 기록이 삭제됩니다.",
+    "description": "Delete date info"
+  },
+  "deleteAllRecords": {
+    "message": "전체 기록 삭제",
+    "description": "Delete all records section title"
+  },
+  "deleteAllRecordsButton": {
+    "message": "전체 기록 삭제",
+    "description": "Delete all records button"
+  },
+  "deleteAllInfo": {
+    "message": "모든 탭 활동 기록이 영구적으로 삭제됩니다. 복구할 수 없습니다.",
+    "description": "Delete all info"
+  },
+  "loadingData": {
+    "message": "데이터를 불러오는 중...",
+    "description": "Loading data message"
+  },
+  "noData": {
+    "message": "데이터 없음",
+    "description": "No data message"
+  },
+  "today": {
+    "message": "오늘",
+    "description": "Today label"
+  },
+  "dateFormat": {
+    "message": "yyyy-MM-dd",
+    "description": "Date format for display"
+  },
+  "listOfAccessedPages": {
+    "message": "조회 기간 내 접속 페이지 목록",
+    "description": "Detailed data list subtitle"
+  },
+  "totalPages": {
+    "message": "총 {count}개 페이지",
+    "description": "Total pages count with dynamic number"
+  },
+  "sortedByTime": {
+    "message": "시간 순 정렬",
+    "description": "Sort order description"
+  },
+  "changeExtensionLanguage": {
+    "message": "확장 프로그램의 언어를 변경할 수 있습니다.",
+    "description": "Language settings subtitle"
+  },
+  "selectLanguageLabel": {
+    "message": "언어 선택:",
+    "description": "Language selection label"
+  },
+  "yearMonthDay": {
+    "message": "연도-월-일",
+    "description": "Date input placeholder format"
+  },
+  "usageTimeMinutes": {
+    "message": "사용 시간 (분)",
+    "description": "Chart dataset label for usage time"
+  },
+  "hoursMinutes": {
+    "message": "{hours}시간 {minutes}분",
+    "description": "Time format with hours and minutes"
+  },
+  "minutesOnly": {
+    "message": "{minutes}분",
+    "description": "Time format with minutes only"
+  },
+  "unknown": {
+    "message": "알 수 없음",
+    "description": "Unknown domain or site"
+  },
+  "todayLabel": {
+    "message": "(오늘)",
+    "description": "Today label for date display"
+  },
+  "dateRangeSeparator": {
+    "message": " ~ ",
+    "description": "Date range separator"
+  },
+  "noLogsMessage": {
+    "message": "탭 추적이 비활성화되어 있습니다",
+    "description": "Message when tab tracking is disabled"
+  },
+  "pageTitle": {
+    "message": "TabbyMansion - 상세 통계",
+    "description": "Stats page title"
+  },
+  "pageDescription": {
+    "message": "TabbyMansion - 사이트 사용 통계와 시간 관리 인사이트",
+    "description": "Stats page meta description"
+  },
+  "dateFullWithToday": {
+    "message": "EEEE, yyyy년 MMMM d일",
+    "description": "Date format with day of week for today display"
+  },
+  "dateFull": {
+    "message": "yyyy년 MMMM d일",
+    "description": "Full date format"
+  },
+  "ttTotalUsageTime": {
+    "message": "선택한 기간 동안 모든 사이트에서 보낸 총 시간입니다. 탭 전환 시점을 기준으로 계산됩니다.",
+    "description": "Tooltip for total usage time"
+  },
+  "ttVisitedSites": {
+    "message": "선택한 기간 동안 방문한 고유한 도메인 수입니다. 같은 사이트의 다른 페이지는 하나로 집계됩니다.",
+    "description": "Tooltip for visited sites"
+  },
+  "ttTotalSessions": {
+    "message": "탭을 활성화한 총 횟수입니다. 탭 전환할 때마다 새로운 세션으로 카운트됩니다.",
+    "description": "Tooltip for total sessions"
+  },
+  "ttCurrentSessions": {
+    "message": "현재 조회 기간 내에서 활성화된 탭의 총 횟수입니다. 탭 전환할 때마다 새로운 세션으로 카운트됩니다.",
+    "description": "Tooltip for current sessions"
+  },
+  "refresh": {
+    "message": "새로고침",
+    "description": "Refresh button text"
+  },
+  "tzKorea": {
+    "message": "🇰🇷 한국 (KST)",
+    "description": "Korea timezone option"
+  },
+  "tzUK": {
+    "message": "🇬🇧 영국 (GMT/BST)",
+    "description": "UK timezone option"
+  },
+  "tzNewYork": {
+    "message": "🇺🇸 뉴욕 (EST/EDT)",
+    "description": "New York timezone option"
+  },
+  "tzLosAngeles": {
+    "message": "🇺🇸 로스앤젤레스 (PST/PDT)",
+    "description": "Los Angeles timezone option"
+  },
+  "tzBerlin": {
+    "message": "🇩🇪 베를린 (CET/CEST)",
+    "description": "Berlin timezone option"
+  },
+  "seconds": {
+    "message": "초",
+    "description": "Seconds unit"
+  },
+  "minutes": {
+    "message": "분",
+    "description": "Minutes unit"
+  },
+  "hours": {
+    "message": "시간",
+    "description": "Hours unit"
+  },
+  "items": {
+    "message": "개",
+    "description": "Items count unit"
+  },
+  "times": {
+    "message": "회",
+    "description": "Times count unit"
+  },
+  "windows": {
+    "message": "개 창",
+    "description": "Windows count unit"
+  },
+  "tabs": {
+    "message": "개 탭",
+    "description": "Tabs count unit"
+  },
+  "chartLabelFormat": {
+    "message": "{label}: {time} ({percentage}%)",
+    "description": "Chart label format with time and percentage"
+  },
+  "timeListDateFormat": {
+    "message": "yyyy년 MM월 dd일",
+    "description": "Date format for time list entries"
+  },
+  "timeListHourlyFormat": {
+    "message": "yyyy년 MM월 dd일 HH:mm",
+    "description": "Date format for hourly time list entries"
+  },
+  "timeListWeeklyFormat": {
+    "message": "yyyy년 MM월 dd일",
+    "description": "Date format for weekly time list entries"
+  },
+  "siteListDateFormat": {
+    "message": "yyyy년 MM월 dd일 HH:mm",
+    "description": "Date format for site list entries"
+  },
+  "secondsOnly": {
+    "message": "{seconds}초",
+    "description": "Time format with seconds only"
+  },
+  "countItems": {
+    "message": "{count}개",
+    "description": "Count format for items"
+  },
+  "countSessions": {
+    "message": "{count}회",
+    "description": "Count format for sessions"
+  },
+  "noDataTitle": {
+    "message": "데이터가 없습니다",
+    "description": "No data title"
+  },
+  "noDataMessage": {
+    "message": "선택한 기간에 탭 활동 데이터가 없습니다.<br>다른 기간을 선택하거나 탭 추적을 활성화해주세요.",
+    "description": "No data message"
+  },
+  "noLogsToday": {
+    "message": "오늘 기록이 없습니다",
+    "description": "No logs today message"
+  },
+  "popupTrackerOffTitle": {
+    "message": "탭 추적이 비활성화되어 있습니다",
+    "description": "Popup tracker off title"
+  },
+  "popupTrackerOffDesc": {
+    "message": "시간 추적을 시작하려면 활성화해주세요",
+    "description": "Popup tracker off description"
+  }
+}

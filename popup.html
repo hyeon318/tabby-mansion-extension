@@ -22,14 +22,22 @@
         />
         TabbyMansion
       </div>
-      <div class="subtitle">집중 작업을 위한 타이머 & 탭 추적기</div>
-      <div id="today-date" class="today-date"></div>
+      <div class="subtitle" data-i18n="focusWorkTimer">
+        집중 작업을 위한 타이머 & 탭 추적기
+      </div>
+      <div
+        id="today-date"
+        class="today-date"
+        data-i18n-format="dateFullWithToday"
+      ></div>
     </div>
 
     <!-- 타이머 섹션 -->
     <div class="timer-section">
       <div class="timer-header">
-        <div class="timer-title">⏱️ 공유 타이머</div>
+        <div class="timer-title">
+          ⏱️ <span data-i18n="sharedTimer">공유 타이머</span>
+        </div>
         <div class="timer-label" id="timer-label"></div>
       </div>
 
@@ -38,11 +46,28 @@
       </div>
 
       <div class="timer-controls">
-        <button class="timer-btn start-btn" id="timer-start-btn">시작</button>
-        <button class="timer-btn pause-btn" id="timer-pause-btn" disabled>
+        <button
+          class="timer-btn start-btn"
+          id="timer-start-btn"
+          data-i18n="start"
+        >
+          시작
+        </button>
+        <button
+          class="timer-btn pause-btn"
+          id="timer-pause-btn"
+          disabled
+          data-i18n="pause"
+        >
           일시정지
         </button>
-        <button class="timer-btn reset-btn" id="timer-reset-btn">리셋</button>
+        <button
+          class="timer-btn reset-btn"
+          id="timer-reset-btn"
+          data-i18n="reset"
+        >
+          리셋
+        </button>
       </div>
 
       <div class="timer-label-input">
@@ -50,6 +75,7 @@
           type="text"
           id="timer-label-input"
           placeholder="타이머 라벨 (선택사항)"
+          data-i18n-placeholder="timerLabel"
           maxlength="30"
         />
       </div>
@@ -58,8 +84,12 @@
     <div class="controls">
       <div class="control-item">
         <div>
-          <div class="control-label">스톱워치 타이머</div>
-          <div class="control-description">화면에 플로팅 타이머 표시</div>
+          <div class="control-label" data-i18n="stopwatchTimer">
+            스톱워치 타이머
+          </div>
+          <div class="control-description" data-i18n="stopwatchDescription">
+            화면에 플로팅 타이머 표시
+          </div>
         </div>
         <div class="toggle-switch" id="stopwatch-toggle">
           <div class="toggle-slider"></div>
@@ -68,8 +98,12 @@
 
       <div class="control-item">
         <div>
-          <div class="control-label">탭 활동 추적</div>
-          <div class="control-description">활성 탭 전환 기록 저장</div>
+          <div class="control-label" data-i18n="tabActivityTracking">
+            탭 활동 추적
+          </div>
+          <div class="control-description" data-i18n="tabTrackingDescription">
+            활성 탭 전환 기록 저장
+          </div>
         </div>
         <div class="toggle-switch" id="tab-tracker-toggle">
           <div class="toggle-slider"></div>
@@ -79,12 +113,20 @@
 
     <div class="stats-section">
       <div class="stats-header">
-        <div class="stats-title">📊 사이트 사용 통계</div>
+        <div class="stats-title">
+          📊 <span data-i18n="siteUsageStats">사이트 사용 통계</span>
+        </div>
         <div class="stats-controls">
-          <button class="view-toggle-btn active" id="chart-view-btn">
+          <button
+            class="view-toggle-btn active"
+            id="chart-view-btn"
+            data-i18n="chart"
+          >
             차트
           </button>
-          <button class="view-toggle-btn" id="log-view-btn">로그</button>
+          <button class="view-toggle-btn" id="log-view-btn" data-i18n="log">
+            로그
+          </button>
           <button class="refresh-btn" id="refresh-btn">
             <img
               src="images/normal.png"
@@ -92,7 +134,14 @@
               id="popup-refresh-btn-image"
             />
           </button>
-          <button class="detail-btn" id="detail-btn">상세보기</button>
+          <button
+            class="detail-btn"
+            id="detail-btn"
+            data-i18n="details"
+            data-i18n-title="details"
+          >
+            상세보기
+          </button>
         </div>
       </div>
 
@@ -104,11 +153,14 @@
 
       <!-- 로그 뷰 -->
       <div class="logs-container" id="logs-container" style="display: none">
-        <div class="no-logs">탭 추적이 비활성화되어 있습니다</div>
+        <div class="no-logs" data-i18n="noLogsMessage">
+          탭 추적이 비활성화되어 있습니다
+        </div>
       </div>
     </div>
 
     <!-- 번들된 스크립트들 (webpack이 자동으로 순서 조정) -->
+    <script src="i18n.js"></script>
     <script src="vendors.js"></script>
     <script src="popup.js"></script>
   </body>

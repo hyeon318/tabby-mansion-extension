@@ -1,0 +1,536 @@
+{
+  "extName": {
+    "message": "TabbyMansion",
+    "description": "Extension name"
+  },
+  "extShortName": {
+    "message": "TabbyMansion",
+    "description": "Extension short name"
+  },
+  "extDescription": {
+    "message": "Focus session timer with tab activity tracking for deep work and coding tests",
+    "description": "Extension description"
+  },
+  "sharedTimer": {
+    "message": "Shared Timer",
+    "description": "Shared timer section title"
+  },
+  "start": {
+    "message": "Start",
+    "description": "Start button text"
+  },
+  "pause": {
+    "message": "Pause",
+    "description": "Pause button text"
+  },
+  "reset": {
+    "message": "Reset",
+    "description": "Reset button text"
+  },
+  "timerLabel": {
+    "message": "Timer Label (Optional)",
+    "description": "Timer label input placeholder"
+  },
+  "stopwatchTimer": {
+    "message": "Stopwatch Timer",
+    "description": "Stopwatch timer control label"
+  },
+  "stopwatchDescription": {
+    "message": "Display floating timer on screen",
+    "description": "Stopwatch timer description"
+  },
+  "tabActivityTracking": {
+    "message": "Tab Activity Tracking",
+    "description": "Tab tracking control label"
+  },
+  "tabTrackingDescription": {
+    "message": "Save active tab switching records",
+    "description": "Tab tracking description"
+  },
+  "siteUsageStats": {
+    "message": "Site Usage Statistics",
+    "description": "Statistics section title"
+  },
+  "chart": {
+    "message": "Chart",
+    "description": "Chart view button"
+  },
+  "log": {
+    "message": "Log",
+    "description": "Log view button"
+  },
+  "details": {
+    "message": "Details",
+    "description": "Details button"
+  },
+  "focusWorkTimer": {
+    "message": "Focus Work Timer & Tab Tracker",
+    "description": "Main subtitle"
+  },
+  "detailedStats": {
+    "message": "Detailed Statistics",
+    "description": "Detailed statistics page title"
+  },
+  "siteUsagePatternAnalysis": {
+    "message": "Site usage pattern analysis and time management insights",
+    "description": "Detailed stats subtitle"
+  },
+  "realTimeUpdate": {
+    "message": "Real-time update",
+    "description": "Real-time update indicator"
+  },
+  "queryConditions": {
+    "message": "Query Conditions",
+    "description": "Filter section title"
+  },
+  "timezoneAndLanguage": {
+    "message": "Timezone & Language",
+    "description": "Timezone and language filter label"
+  },
+  "korea": {
+    "message": "🇰🇷 Korea (KST)",
+    "description": "Korea timezone option"
+  },
+  "uk": {
+    "message": "🇬🇧 UK (GMT/BST)",
+    "description": "UK timezone option"
+  },
+  "newYork": {
+    "message": "🇺🇸 New York (EST/EDT)",
+    "description": "New York timezone option"
+  },
+  "losAngeles": {
+    "message": "🇺🇸 Los Angeles (PST/PDT)",
+    "description": "Los Angeles timezone option"
+  },
+  "berlin": {
+    "message": "🇩🇪 Berlin (CET/CEST)",
+    "description": "Berlin timezone option"
+  },
+  "queryPeriod": {
+    "message": "Query Period",
+    "description": "Query period filter label"
+  },
+  "startDate": {
+    "message": "Start Date",
+    "description": "Start date input placeholder"
+  },
+  "startTime": {
+    "message": "Start Time",
+    "description": "Start time input placeholder"
+  },
+  "endDate": {
+    "message": "End Date",
+    "description": "End date input placeholder"
+  },
+  "endTime": {
+    "message": "End Time",
+    "description": "End time input placeholder"
+  },
+  "siteFilter": {
+    "message": "Site Filter",
+    "description": "Site filter label"
+  },
+  "allSites": {
+    "message": "All Sites",
+    "description": "All sites option"
+  },
+  "analysisUnit": {
+    "message": "Analysis Unit",
+    "description": "Analysis unit filter label"
+  },
+  "daily": {
+    "message": "Daily",
+    "description": "Daily view option"
+  },
+  "hourly": {
+    "message": "Hourly",
+    "description": "Hourly view option"
+  },
+  "weekly": {
+    "message": "Weekly",
+    "description": "Weekly view option"
+  },
+  "applyFilter": {
+    "message": "Apply Filter",
+    "description": "Apply filter button"
+  },
+  "resetFilter": {
+    "message": "Reset Filter",
+    "description": "Reset filter button"
+  },
+  "refreshData": {
+    "message": "Refresh Data",
+    "description": "Refresh data button"
+  },
+  "exportData": {
+    "message": "Export Data",
+    "description": "Export data button"
+  },
+  "totalTime": {
+    "message": "Total Time",
+    "description": "Total time label"
+  },
+  "totalSites": {
+    "message": "Total Sites",
+    "description": "Total sites label"
+  },
+  "totalSessions": {
+    "message": "Total Sessions",
+    "description": "Total sessions label"
+  },
+  "currentSessions": {
+    "message": "Current Sessions",
+    "description": "Current sessions label"
+  },
+  "deleteDate": {
+    "message": "Delete Date",
+    "description": "Delete date input placeholder"
+  },
+  "deleteDateBtn": {
+    "message": "Delete Date",
+    "description": "Delete date button"
+  },
+  "deleteAll": {
+    "message": "Delete All",
+    "description": "Delete all button"
+  },
+  "settings": {
+    "message": "Settings",
+    "description": "Settings page title"
+  },
+  "languageSettings": {
+    "message": "Language Settings",
+    "description": "Language settings section title"
+  },
+  "selectLanguage": {
+    "message": "Select Language:",
+    "description": "Language selection label"
+  },
+  "languageDescription": {
+    "message": "Automatically selected based on browser language settings. You can also change it manually.",
+    "description": "Language setting description"
+  },
+  "timerSettings": {
+    "message": "Timer Settings",
+    "description": "Timer settings section title"
+  },
+  "autoStartTimer": {
+    "message": "Auto-start timer when page loads",
+    "description": "Auto-start timer checkbox label"
+  },
+  "showNotifications": {
+    "message": "Show timer notifications",
+    "description": "Show notifications checkbox label"
+  },
+  "dataManagement": {
+    "message": "Data Management",
+    "description": "Data management section title"
+  },
+  "importData": {
+    "message": "Import Data",
+    "description": "Import data button"
+  },
+  "clearAllData": {
+    "message": "Clear All Data",
+    "description": "Clear all data button"
+  },
+  "dataDescription": {
+    "message": "Delete all timer records and site usage statistics. This action cannot be undone.",
+    "description": "Data management description"
+  },
+  "about": {
+    "message": "About",
+    "description": "About section title"
+  },
+  "version": {
+    "message": "Version:",
+    "description": "Version label"
+  },
+  "currentLanguage": {
+    "message": "Current Language:",
+    "description": "Current language label"
+  },
+
+  "queryResults": {
+    "message": "Query Results",
+    "description": "Query results section title"
+  },
+  "totalUsageTime": {
+    "message": "Total Usage Time",
+    "description": "Total usage time label"
+  },
+  "visitedSites": {
+    "message": "Visited Sites",
+    "description": "Visited sites label"
+  },
+  "timeUsageTrend": {
+    "message": "Time Usage Trend",
+    "description": "Time usage trend chart title"
+  },
+  "checkHourlyPattern": {
+    "message": "Check hourly usage patterns",
+    "description": "Time chart subtitle"
+  },
+  "hourlyUsageList": {
+    "message": "Hourly Usage List",
+    "description": "Hourly usage list title"
+  },
+  "siteUsageDistribution": {
+    "message": "Site Usage Distribution",
+    "description": "Site usage distribution chart title"
+  },
+  "checkMostUsedSites": {
+    "message": "Check most used sites",
+    "description": "Distribution chart subtitle"
+  },
+  "siteDetailedInfo": {
+    "message": "Site Detailed Information",
+    "description": "Site detailed info title"
+  },
+  "detailedDataList": {
+    "message": "Detailed Data List",
+    "description": "Detailed data list title"
+  },
+  "searchTitleDomainAddress": {
+    "message": "Search title/domain/address",
+    "description": "Timeline search placeholder"
+  },
+  "deleteOrResetRecords": {
+    "message": "Delete specific date records or reset all records",
+    "description": "Data management subtitle"
+  },
+  "deleteByDate": {
+    "message": "Delete by Date",
+    "description": "Delete by date section title"
+  },
+  "selectDateToDelete": {
+    "message": "Select date to delete",
+    "description": "Delete date input placeholder"
+  },
+  "deleteSelectedDateRecords": {
+    "message": "Delete Selected Date Records",
+    "description": "Delete selected date button"
+  },
+  "deleteDateInfo": {
+    "message": "All tab activity records for the selected date will be deleted.",
+    "description": "Delete date info"
+  },
+  "deleteAllRecords": {
+    "message": "Delete All Records",
+    "description": "Delete all records section title"
+  },
+  "deleteAllRecordsButton": {
+    "message": "Delete All Records",
+    "description": "Delete all records button"
+  },
+  "deleteAllInfo": {
+    "message": "All tab activity records will be permanently deleted. Cannot be recovered.",
+    "description": "Delete all info"
+  },
+  "loadingData": {
+    "message": "Loading data...",
+    "description": "Loading data message"
+  },
+  "noData": {
+    "message": "No data",
+    "description": "No data message"
+  },
+  "today": {
+    "message": "Today",
+    "description": "Today label"
+  },
+  "dateFormat": {
+    "message": "yyyy-MM-dd",
+    "description": "Date format for display"
+  },
+  "listOfAccessedPages": {
+    "message": "List of accessed pages within query period",
+    "description": "Detailed data list subtitle"
+  },
+  "totalPages": {
+    "message": "Total {count} pages",
+    "description": "Total pages count with dynamic number"
+  },
+  "sortedByTime": {
+    "message": "Sorted by time",
+    "description": "Sort order description"
+  },
+  "changeExtensionLanguage": {
+    "message": "You can change the language of the extension.",
+    "description": "Language settings subtitle"
+  },
+  "selectLanguageLabel": {
+    "message": "Select Language:",
+    "description": "Language selection label"
+  },
+  "yearMonthDay": {
+    "message": "Year-Month-Day",
+    "description": "Date input placeholder format"
+  },
+  "usageTimeMinutes": {
+    "message": "Usage Time (minutes)",
+    "description": "Chart dataset label for usage time"
+  },
+  "hoursMinutes": {
+    "message": "{hours}h {minutes}m",
+    "description": "Time format with hours and minutes"
+  },
+  "minutesOnly": {
+    "message": "{minutes}m",
+    "description": "Time format with minutes only"
+  },
+  "unknown": {
+    "message": "Unknown",
+    "description": "Unknown domain or site"
+  },
+  "todayLabel": {
+    "message": "(Today)",
+    "description": "Today label for date display"
+  },
+  "dateRangeSeparator": {
+    "message": " ~ ",
+    "description": "Date range separator"
+  },
+  "noLogsMessage": {
+    "message": "Tab tracking is disabled",
+    "description": "Message when tab tracking is disabled"
+  },
+
+  "pageTitle": {
+    "message": "TabbyMansion - Detailed Statistics",
+    "description": "Stats page title"
+  },
+  "pageDescription": {
+    "message": "TabbyMansion - Site usage statistics and time management insights",
+    "description": "Stats page meta description"
+  },
+  "dateFullWithToday": {
+    "message": "EEEE, MMMM d, yyyy",
+    "description": "Date format with day of week for today display"
+  },
+  "dateFull": {
+    "message": "MMMM d, yyyy",
+    "description": "Full date format"
+  },
+  "ttTotalUsageTime": {
+    "message": "Total time spent on all sites during the selected period. Calculated based on tab switching times.",
+    "description": "Tooltip for total usage time"
+  },
+  "ttVisitedSites": {
+    "message": "Number of unique domains visited during the selected period. Different pages of the same site are counted as one.",
+    "description": "Tooltip for visited sites"
+  },
+  "ttTotalSessions": {
+    "message": "Total number of times tabs were activated. Each tab switch counts as a new session.",
+    "description": "Tooltip for total sessions"
+  },
+  "ttCurrentSessions": {
+    "message": "Total number of tab activations within the current query period. Each tab switch counts as a new session.",
+    "description": "Tooltip for current sessions"
+  },
+  "refresh": {
+    "message": "Refresh",
+    "description": "Refresh button text"
+  },
+  "tzKorea": {
+    "message": "🇰🇷 Korea (KST)",
+    "description": "Korea timezone option"
+  },
+  "tzUK": {
+    "message": "🇬🇧 UK (GMT/BST)",
+    "description": "UK timezone option"
+  },
+  "tzNewYork": {
+    "message": "🇺🇸 New York (EST/EDT)",
+    "description": "New York timezone option"
+  },
+  "tzLosAngeles": {
+    "message": "🇺🇸 Los Angeles (PST/PDT)",
+    "description": "Los Angeles timezone option"
+  },
+  "tzBerlin": {
+    "message": "🇩🇪 Berlin (CET/CEST)",
+    "description": "Berlin timezone option"
+  },
+  "seconds": {
+    "message": "seconds",
+    "description": "Seconds unit"
+  },
+  "minutes": {
+    "message": "minutes",
+    "description": "Minutes unit"
+  },
+  "hours": {
+    "message": "hours",
+    "description": "Hours unit"
+  },
+  "items": {
+    "message": "items",
+    "description": "Items count unit"
+  },
+  "times": {
+    "message": "times",
+    "description": "Times count unit"
+  },
+  "windows": {
+    "message": "windows",
+    "description": "Windows count unit"
+  },
+  "tabs": {
+    "message": "tabs",
+    "description": "Tabs count unit"
+  },
+  "chartLabelFormat": {
+    "message": "{label}: {time} ({percentage}%)",
+    "description": "Chart label format with time and percentage"
+  },
+  "timeListDateFormat": {
+    "message": "MMM d, yyyy",
+    "description": "Date format for time list entries"
+  },
+  "timeListHourlyFormat": {
+    "message": "MMM d, yyyy HH:mm",
+    "description": "Date format for hourly time list entries"
+  },
+  "timeListWeeklyFormat": {
+    "message": "MMM d, yyyy",
+    "description": "Date format for weekly time list entries"
+  },
+  "siteListDateFormat": {
+    "message": "MMM d, yyyy HH:mm",
+    "description": "Date format for site list entries"
+  },
+  "secondsOnly": {
+    "message": "{seconds}s",
+    "description": "Time format with seconds only"
+  },
+  "countItems": {
+    "message": "{count} items",
+    "description": "Count format for items"
+  },
+  "countSessions": {
+    "message": "{count} sessions",
+    "description": "Count format for sessions"
+  },
+  "noDataTitle": {
+    "message": "No Data Available",
+    "description": "No data title"
+  },
+  "noDataMessage": {
+    "message": "No tab activity data found for the selected period.<br>Try selecting a different time range or enable tab tracking.",
+    "description": "No data message"
+  },
+  "noLogsToday": {
+    "message": "No logs today",
+    "description": "No logs today message"
+  },
+  "popupTrackerOffTitle": {
+    "message": "Tab tracking is disabled",
+    "description": "Popup tracker off title"
+  },
+  "popupTrackerOffDesc": {
+    "message": "Please enable to start time tracking",
+    "description": "Popup tracker off description"
+  }
+}
