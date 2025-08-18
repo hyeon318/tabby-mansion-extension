@@ -18,7 +18,7 @@
         <div class="header-top">
           <div class="logo">
             <img
-              src="public/images/icon48.png "
+              src="images/icon48.png "
               style="width: 30px; height: 30px"
               alt="logo"
             />
@@ -293,19 +293,11 @@
 
     <!-- Floating 새로고침 버튼 -->
     <button class="floating-refresh-btn" id="refresh-data" title="새로고침">
-      <img
-        src="public/images/normal.png"
-        alt="새로고침"
-        id="refresh-btn-image"
-      />
+      <img src="images/normal.png" alt="새로고침" id="refresh-btn-image" />
     </button>
 
-    <!-- Chart.js must load first -->
-    <script src="vendor/chart.umd.js"></script>
-    <!-- Date-fns for timezone handling -->
-    <script src="vendor/date-fns.umd.js"></script>
-    <script src="vendor/date-fns-tz.umd.js"></script>
-    <!-- Then load your script -->
+    <!-- 번들된 스크립트들 (webpack이 자동으로 순서 조정) -->
+    <script src="vendors.js"></script>
     <script src="stats.js"></script>
   </body>
 </html>

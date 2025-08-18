@@ -1,3 +1,72 @@
+// TabbyMansion Stats Script
+// 필요한 date-fns 함수들만 부분 import
+// Debug 유틸리티 import
+import { debug } from "./debug.js";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  differenceInMinutes,
+  differenceInHours,
+  differenceInDays,
+  isWithinInterval,
+  parseISO,
+} from "date-fns";
+import { ko } from "date-fns/locale";
+
+// date-fns-tz에서 필요한 함수들만 부분 import
+import {
+  formatInTimeZone,
+  toZonedTime,
+  fromZonedTime,
+  getTimezoneOffset,
+} from "date-fns-tz";
+
+// Chart.js에서 필요한 컴포넌트만 선택적 import
+import { Chart } from "chart.js";
+import {
+  LineController,
+  BarController,
+  DoughnutController,
+  LineElement,
+  BarElement,
+  ArcElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  TimeScale,
+  Tooltip,
+  Legend,
+  Title,
+} from "chart.js";
+
+// 필요한 Chart.js 컴포넌트만 등록
+Chart.register(
+  LineController,
+  BarController,
+  DoughnutController,
+  LineElement,
+  BarElement,
+  ArcElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  TimeScale,
+  Tooltip,
+  Legend,
+  Title
+);
+
+// 등록 확인
+console.log(
+  "Doughnut controller registered:",
+  Chart.registry.getController("doughnut")
+);
+
 document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   // DOM 요소들
@@ -131,10 +200,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /** 날짜 포맷팅 - 인풋 value용(yyyy-MM-dd) */
   function formatDateForInputTZ(date, tz) {
-    if (typeof window.dateFnsTz === "undefined") {
+    if (typeof formatInTimeZone === "undefined") {
       throw new Error("date-fns-tz is required for timezone handling");
     }
-    return window.dateFnsTz.formatInTimeZone(date, tz, "yyyy-MM-dd");
+    return formatInTimeZone(date, tz, "yyyy-MM-dd");
   }
 
   /** TZ에 맞춘 라벨 포맷 */
@@ -444,7 +513,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 페이지 초기화
   // =========================================================================
   async function initializePage() {
-    if (typeof window.dateFnsTz === "undefined") {
+    // date-fns-tz가 import되었는지 확인
+    if (typeof formatInTimeZone === "undefined") {
       alert(
         "타임존 처리 라이브러리가 로드되지 않았습니다. 페이지를 새로고침해주세요."
       );
@@ -468,14 +538,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         startTimeEl?.value || "00:00"
       }:00`;
       const endIso = `${endDateEl.value} ${endTimeEl?.value || "23:59"}:59`;
-      currentFilters.startDate = window.dateFnsTz.zonedTimeToUtc(
-        startIso,
-        currentTimezone
-      );
-      currentFilters.endDate = window.dateFnsTz.zonedTimeToUtc(
-        endIso,
-        currentTimezone
-      );
+      currentFilters.startDate = toZonedTime(startIso, currentTimezone);
+      currentFilters.endDate = toZonedTime(endIso, currentTimezone);
     } catch {
       currentFilters.startDate = new Date(`${startDateEl.value}T00:00:00`);
       currentFilters.endDate = new Date(`${endDateEl.value}T23:59:59`);
@@ -604,14 +668,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         startTimeEl?.value || "00:00"
       }:00`;
       const endIso = `${endDateEl.value} ${endTimeEl?.value || "23:59"}:59`;
-      currentFilters.startDate = window.dateFnsTz.zonedTimeToUtc(
-        startIso,
-        currentTimezone
-      );
-      currentFilters.endDate = window.dateFnsTz.zonedTimeToUtc(
-        endIso,
-        currentTimezone
-      );
+      currentFilters.startDate = toZonedTime(startIso, currentTimezone);
+      currentFilters.endDate = toZonedTime(endIso, currentTimezone);
 
       filterData();
       await displayResults();
@@ -642,7 +700,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       // 이미지를 wink로 변경
       const refreshBtnImage = document.getElementById("refresh-btn-image");
       if (refreshBtnImage) {
-        refreshBtnImage.src = "public/images/wink.png";
+        refreshBtnImage.src = "images/wink.png";
       }
 
       refreshDataBtn.disabled = true;
@@ -658,7 +716,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       setTimeout(() => {
         const refreshBtnImage = document.getElementById("refresh-btn-image");
         if (refreshBtnImage) {
-          refreshBtnImage.src = "public/images/normal.png";
+          refreshBtnImage.src = "images/normal.png";
         }
       }, 1000);
     }
@@ -713,12 +771,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     totalSessionsEl.textContent = `${totalSessions}회`;
     currentSessionsEl.textContent = `${openWindows}개 창, ${openTabs}개 탭`;
 
-    const startStr = window.dateFnsTz.formatInTimeZone(
+    const startStr = formatInTimeZone(
       currentFilters.startDate,
       currentTimezone,
       "yyyy년 MM월 dd일"
     );
-    const endStr = window.dateFnsTz.formatInTimeZone(
+    const endStr = formatInTimeZone(
       currentFilters.endDate,
       currentTimezone,
       "yyyy년 MM월 dd일"
@@ -727,11 +785,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const today = new Date();
     const isToday =
       startStr === endStr &&
-      window.dateFnsTz.formatInTimeZone(
-        today,
-        currentTimezone,
-        "yyyy년 MM월 dd일"
-      ) === startStr;
+      formatInTimeZone(today, currentTimezone, "yyyy년 MM월 dd일") === startStr;
 
     resultsPeriod.textContent = isToday
       ? `${startStr} (오늘)`
@@ -777,12 +831,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   function updateTimeRangeDisplay() {
     if (!timeRangeDisplayEl) return;
-    const startStr = window.dateFnsTz.formatInTimeZone(
+    const startStr = formatInTimeZone(
       new Date(`${startDateEl.value}T${startTimeEl?.value || "00:00"}:00`),
       currentTimezone,
       "yyyy년 MM월 dd일 HH:mm"
     );
-    const endStr = window.dateFnsTz.formatInTimeZone(
+    const endStr = formatInTimeZone(
       new Date(`${endDateEl.value}T${endTimeEl?.value || "23:59"}:59`),
       currentTimezone,
       "yyyy년 MM월 dd일 HH:mm"
@@ -1128,7 +1182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 각 일별로 해당 일에 속하는 로그들을 그룹화
     records.forEach(rec => {
       const dateUtc = new Date(rec.timestamp);
-      const date = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
+      const date = fromZonedTime(dateUtc, currentTimezone);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
         2,
         "0"
@@ -1239,7 +1293,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 각 시간대별로 해당 시간대에 속하는 로그들을 그룹화
     records.forEach(rec => {
       const dateUtc = new Date(rec.timestamp);
-      const d = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
+      const d = fromZonedTime(dateUtc, currentTimezone);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
         2,
         "0"
@@ -1352,7 +1406,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 각 주별로 해당 주에 속하는 로그들을 그룹화
     records.forEach(rec => {
       const dateUtc = new Date(rec.timestamp);
-      const d = window.dateFnsTz.utcToZonedTime(dateUtc, currentTimezone);
+      const d = fromZonedTime(dateUtc, currentTimezone);
       const weekStart = new Date(d);
       weekStart.setDate(d.getDate() - d.getDay());
       weekStart.setHours(0, 0, 0, 0);

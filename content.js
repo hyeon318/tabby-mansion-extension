@@ -1,4 +1,6 @@
 // TabbyMansion Content Script - 공유 타이머 오버레이
+// Debug 유틸리티 import
+import { debug } from "./debug.js";
 let stopwatchElement = null;
 let timerDisplayInterval = null;
 
@@ -315,7 +317,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     sendResponse({ success: true });
   } else if (request.action === "TIMER_STATE_UPDATE") {
-    console.log("⏰ 백그라운드에서 타이머 상태 업데이트 수신:", request.state);
+    debug.timer("백그라운드에서 타이머 상태 업데이트 수신:", request.state);
     timerState = request.state;
     updateTimerDisplay();
     updateTimerControls();
@@ -326,7 +328,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // 스토리지 변경 리스너
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "local" && changes.timerState) {
-    console.log("⏰ 타이머 상태 변경 감지 (content script)");
+    debug.timer("타이머 상태 변경 감지 (content script)");
     timerState = changes.timerState.newValue;
     updateTimerDisplay();
     updateTimerControls();

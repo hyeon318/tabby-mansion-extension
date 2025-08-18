@@ -16,7 +16,7 @@
     <div class="header">
       <div class="logo">
         <img
-          src="public/images/icon48.png"
+          src="images/icon48.png"
           style="width: 22px; height: 22px"
           alt="logo"
         />
@@ -87,7 +87,7 @@
           <button class="view-toggle-btn" id="log-view-btn">로그</button>
           <button class="refresh-btn" id="refresh-btn">
             <img
-              src="public/images/normal.png"
+              src="images/normal.png"
               alt="새로고침"
               id="popup-refresh-btn-image"
             />
@@ -108,9 +108,8 @@
       </div>
     </div>
 
-    <!-- Chart.js must load first -->
-    <script src="vendor/chart.umd.js"></script>
-    <!-- Then load your script -->
+    <!-- 번들된 스크립트들 (webpack이 자동으로 순서 조정) -->
+    <script src="vendors.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

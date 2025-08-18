@@ -14,7 +14,8 @@ let timerState = {
 
 // 확장 프로그램 설치 시 초기 설정
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log("📱 TabbyMansion 확장 프로그램이 설치되었습니다.");
+  if (typeof debug !== "undefined")
+    debug.serviceWorker("TabbyMansion 확장 프로그램이 설치되었습니다.");
 
   // 기본 설정 초기화
   await chrome.storage.local.set({
@@ -39,19 +40,22 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 // Service Worker 시작 시 타이머 상태 복원
 chrome.runtime.onStartup.addListener(async () => {
-  console.log("🚀 TabbyMansion Service Worker 시작됨");
+  if (typeof debug !== "undefined")
+    debug.serviceWorker("TabbyMansion Service Worker 시작됨");
   await loadTimerState();
 });
 
 // Service Worker 활성화 시 타이머 상태 복원
 self.addEventListener("activate", async event => {
-  console.log("🔄 TabbyMansion Service Worker 활성화됨");
+  if (typeof debug !== "undefined")
+    debug.serviceWorker("TabbyMansion Service Worker 활성화됨");
   await loadTimerState();
 });
 
 // Service Worker 종료 전 타이머 상태 저장
 self.addEventListener("beforeunload", async event => {
-  console.log("🔄 TabbyMansion Service Worker 종료 예정 - 상태 저장");
+  if (typeof debug !== "undefined")
+    debug.serviceWorker("TabbyMansion Service Worker 종료 예정 - 상태 저장");
   if (timerState.status === "running") {
     await saveTimerState();
   }
@@ -70,20 +74,22 @@ async function loadTimerState() {
         typeof savedState.accumulatedMs !== "number" ||
         (savedState.startedAt && typeof savedState.startedAt !== "number")
       ) {
-        console.log("⚠️ 저장된 타이머 상태가 유효하지 않습니다. 초기화합니다.");
+        if (typeof debug !== "undefined")
+          debug.warn("저장된 타이머 상태가 유효하지 않습니다. 초기화합니다.");
         resetTimer();
         return;
       }
 
       timerState = { ...timerState, ...savedState };
-      console.log("⏰ TabbyMansion 타이머 상태 로드됨:", {
-        status: timerState.status,
-        accumulatedMs: timerState.accumulatedMs,
-        label: timerState.label,
-        startedAt: timerState.startedAt
-          ? new Date(timerState.startedAt).toLocaleString()
-          : null,
-      });
+      if (typeof debug !== "undefined")
+        debug.timer("TabbyMansion 타이머 상태 로드됨:", {
+          status: timerState.status,
+          accumulatedMs: timerState.accumulatedMs,
+          label: timerState.label,
+          startedAt: timerState.startedAt
+            ? new Date(timerState.startedAt).toLocaleString()
+            : null,
+        });
 
       // Service Worker 재시작 시 실행 중이던 타이머 복원
       if (timerState.status === "running" && timerState.startedAt) {
@@ -93,20 +99,22 @@ async function loadTimerState() {
         // Service Worker 재시작으로 인한 시간 차이가 비정상적으로 큰 경우만 처리
         // (7일 이상은 확실히 비정상적인 경우)
         if (timeSinceStart > 7 * 24 * 60 * 60 * 1000) {
-          console.log(
-            "⏰ 타이머가 7일 이상 실행되어 리셋합니다 (비정상적인 상태)"
-          );
+          if (typeof debug !== "undefined")
+            debug.timer(
+              "타이머가 7일 이상 실행되어 리셋합니다 (비정상적인 상태)"
+            );
           resetTimer();
         } else {
           // 타이머 상태를 현재 시간으로 업데이트하여 정확한 시간 계산
           timerState.startedAt = now;
           saveTimerState();
           broadcastTimerState();
-          console.log("⏰ 실행 중이던 타이머 복원됨:", {
-            status: timerState.status,
-            accumulatedMs: timerState.accumulatedMs,
-            label: timerState.label,
-          });
+          if (typeof debug !== "undefined")
+            debug.timer("실행 중이던 타이머 복원됨:", {
+              status: timerState.status,
+              accumulatedMs: timerState.accumulatedMs,
+              label: timerState.label,
+            });
         }
       }
     }
@@ -122,12 +130,13 @@ async function saveTimerState() {
     timerState.lastSaveTime = Date.now();
 
     await chrome.storage.local.set({ timerState });
-    console.log("💾 타이머 상태 저장됨:", {
-      status: timerState.status,
-      accumulatedMs: timerState.accumulatedMs,
-      label: timerState.label,
-      lastSaveTime: new Date(timerState.lastSaveTime).toLocaleString(),
-    });
+    if (typeof debug !== "undefined")
+      debug.storage("타이머 상태 저장됨:", {
+        status: timerState.status,
+        accumulatedMs: timerState.accumulatedMs,
+        label: timerState.label,
+        lastSaveTime: new Date(timerState.lastSaveTime).toLocaleString(),
+      });
   } catch (error) {
     console.error("❌ 타이머 상태 저장 실패:", error);
   }
@@ -136,7 +145,8 @@ async function saveTimerState() {
 // 타이머 시작
 function startTimer(label = "") {
   if (timerState.status === "running") {
-    console.log("⏰ 타이머가 이미 실행 중입니다");
+    if (typeof debug !== "undefined")
+      debug.timer("타이머가 이미 실행 중입니다");
     return false;
   }
 
@@ -157,14 +167,15 @@ function startTimer(label = "") {
     }
   }, 30000); // 30초마다 저장
 
-  console.log("▶️ 타이머 시작:", timerState);
+  if (typeof debug !== "undefined") debug.timer("타이머 시작:", timerState);
   return true;
 }
 
 // 타이머 일시정지
 function pauseTimer() {
   if (timerState.status !== "running") {
-    console.log("⏸️ 타이머가 실행 중이 아닙니다");
+    if (typeof debug !== "undefined")
+      debug.timer("타이머가 실행 중이 아닙니다");
     return false;
   }
 
@@ -182,13 +193,13 @@ function pauseTimer() {
 
   saveTimerState();
   broadcastTimerState();
-  console.log("⏸️ 타이머 일시정지:", timerState);
+  if (typeof debug !== "undefined") debug.timer("타이머 일시정지:", timerState);
   return true;
 }
 
 // 타이머 리셋
 function resetTimer() {
-  console.log("🔄 타이머 리셋 시작");
+  if (typeof debug !== "undefined") debug.timer("타이머 리셋 시작");
 
   // 주기적 저장 인터벌 정리
   if (timerState.saveInterval) {
@@ -204,7 +215,7 @@ function resetTimer() {
 
   saveTimerState();
   broadcastTimerState();
-  console.log("🔄 타이머 리셋 완료");
+  if (typeof debug !== "undefined") debug.timer("타이머 리셋 완료");
   return true;
 }
 
@@ -240,7 +251,8 @@ function getTimerState() {
 // 타이머 상태 브로드캐스트 (모든 UI에 알림)
 function broadcastTimerState() {
   const state = getTimerState();
-  console.log("📡 타이머 상태 브로드캐스트:", state);
+  if (typeof debug !== "undefined")
+    debug.timer("타이머 상태 브로드캐스트:", state);
 
   // 모든 탭에 메시지 전송
   chrome.tabs.query({}, tabs => {
@@ -266,7 +278,8 @@ function broadcastTimerState() {
 // 기존 통계 데이터 마이그레이션 (titles 타입 정규화)
 async function migrateLegacyStats() {
   try {
-    console.log("🔄 기존 통계 데이터 마이그레이션 시작...");
+    if (typeof debug !== "undefined")
+      debug.log("기존 통계 데이터 마이그레이션 시작...");
 
     const result = await chrome.storage.local.get([
       "dailyStats",
@@ -298,11 +311,12 @@ async function migrateLegacyStats() {
 
       if (migrationNeeded) {
         await chrome.storage.local.set({ dailyStats });
-        console.log("✅ dailyStats 마이그레이션 완료");
+        if (typeof debug !== "undefined")
+          debug.log("dailyStats 마이그레이션 완료");
       }
     }
 
-    console.log("✅ 데이터 마이그레이션 완료");
+    if (typeof debug !== "undefined") debug.log("데이터 마이그레이션 완료");
   } catch (error) {
     console.error("❌ 데이터 마이그레이션 실패:", error);
   }
@@ -310,31 +324,35 @@ async function migrateLegacyStats() {
 
 // 탭 활성화 이벤트 리스너
 chrome.tabs.onActivated.addListener(async activeInfo => {
-  console.log("🔍 탭 활성화 이벤트:", activeInfo);
+  if (typeof debug !== "undefined")
+    debug.tracker("탭 활성화 이벤트:", activeInfo);
 
   const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  console.log("📊 탭 트래커 상태:", result.isTabTrackerEnabled);
+  if (typeof debug !== "undefined")
+    debug.tracker("탭 트래커 상태:", result.isTabTrackerEnabled);
 
   if (!result.isTabTrackerEnabled) {
-    console.log("❌ 탭 트래커가 비활성화됨");
+    if (typeof debug !== "undefined") debug.tracker("탭 트래커가 비활성화됨");
     return;
   }
 
   try {
     // 이전 탭의 종료 시간 기록
     if (currentTabId && tabStartTime) {
-      console.log("⏰ 이전 탭 종료 기록:", currentTabId, tabStartTime);
+      if (typeof debug !== "undefined")
+        debug.timer("이전 탭 종료 기록:", currentTabId, tabStartTime);
       await recordTabEndTime(currentTabId, tabStartTime);
     }
 
     const tab = await chrome.tabs.get(activeInfo.tabId);
-    console.log("📝 새 탭 정보:", { title: tab.title, url: tab.url });
+    if (typeof debug !== "undefined")
+      debug.tracker("새 탭 정보:", { title: tab.title, url: tab.url });
 
     currentTabId = activeInfo.tabId;
     tabStartTime = Date.now(); // 새 탭 시작 시간 기록
 
     await logTabActivity(tab, tabStartTime);
-    console.log("✅ 탭 활동 로그 저장 완료");
+    if (typeof debug !== "undefined") debug.tracker("탭 활동 로그 저장 완료");
   } catch (error) {
     console.error("❌ 탭 정보 가져오기 실패:", error);
   }
@@ -394,7 +412,8 @@ async function recordTabEndTime(tabId, startTime) {
   // 탭 트래커 상태 확인
   const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
   if (!trackerResult.isTabTrackerEnabled) {
-    console.log("🚫 탭 트래커가 비활성화되어 종료 시간 기록을 건너뜁니다");
+    if (typeof debug !== "undefined")
+      debug.tracker("탭 트래커가 비활성화되어 종료 시간 기록을 건너뜁니다");
     return;
   }
 
@@ -425,18 +444,20 @@ async function logTabActivity(tab, startTime = null) {
   // 탭 트래커 상태 확인
   const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
   if (!trackerResult.isTabTrackerEnabled) {
-    console.log("🚫 탭 트래커가 비활성화되어 데이터 저장을 건너뜁니다");
+    if (typeof debug !== "undefined")
+      debug.tracker("탭 트래커가 비활성화되어 데이터 저장을 건너뜁니다");
     return;
   }
 
-  console.log("📋 탭 활동 로그 시작:", { title: tab.title, url: tab.url });
+  if (typeof debug !== "undefined")
+    debug.tracker("탭 활동 로그 시작:", { title: tab.title, url: tab.url });
 
   if (
     !tab.url ||
     tab.url.startsWith("chrome://") ||
     tab.url.startsWith("chrome-extension://")
   ) {
-    console.log("🚫 제외된 URL:", tab.url);
+    if (typeof debug !== "undefined") debug.tracker("제외된 URL:", tab.url);
     return;
   }
 
@@ -476,14 +497,15 @@ async function logTabActivity(tab, startTime = null) {
 
   await chrome.storage.local.set({ tabLogs });
 
-  console.log("💾 로그 저장 완료:", {
-    totalLogs: tabLogs.length,
-    latestLog: {
-      domain: logEntry.domain,
-      title: logEntry.title.substring(0, 30),
-      timestamp: logEntry.timeFormatted,
-    },
-  });
+  if (typeof debug !== "undefined")
+    debug.storage("로그 저장 완료:", {
+      totalLogs: tabLogs.length,
+      latestLog: {
+        domain: logEntry.domain,
+        title: logEntry.title.substring(0, 30),
+        timestamp: logEntry.timeFormatted,
+      },
+    });
 }
 
 // 도메인 추출 함수
@@ -506,9 +528,10 @@ async function updateRealTimeStats(logEntry, currentStats) {
   // 탭 트래커 상태 확인
   const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
   if (!trackerResult.isTabTrackerEnabled) {
-    console.log(
-      "🚫 탭 트래커가 비활성화되어 실시간 통계 업데이트를 건너뜁니다"
-    );
+    if (typeof debug !== "undefined")
+      debug.tracker(
+        "탭 트래커가 비활성화되어 실시간 통계 업데이트를 건너뜁니다"
+      );
     return;
   }
 
@@ -623,17 +646,20 @@ async function updateDailyStats(logEntry, currentStats) {
 
 // 메시지 처리
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("📨 백그라운드 메시지 수신:", request);
+  if (typeof debug !== "undefined")
+    debug.log("백그라운드 메시지 수신:", request);
 
   if (request.action === "updateTabTracker") {
     isTabTrackerEnabled = request.enabled;
-    console.log("🔄 탭 트래커 상태 변경:", isTabTrackerEnabled);
+    if (typeof debug !== "undefined")
+      debug.tracker("탭 트래커 상태 변경:", isTabTrackerEnabled);
 
     if (request.enabled) {
       // 현재 활성 탭 확인
       chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         if (tabs[0]) {
-          console.log("🎯 초기 활성 탭 설정:", tabs[0].url);
+          if (typeof debug !== "undefined")
+            debug.tracker("초기 활성 탭 설정:", tabs[0].url);
           currentTabId = tabs[0].id;
           tabStartTime = Date.now();
           logTabActivity(tabs[0], tabStartTime);
@@ -641,10 +667,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     } else {
       // 탭 트래커 비활성화 시 추적 상태만 초기화 (데이터 수집 중단)
-      console.log("⏹️ 탭 트래커 비활성화 - 데이터 수집 중단");
+      if (typeof debug !== "undefined")
+        debug.tracker("탭 트래커 비활성화 - 데이터 수집 중단");
       currentTabId = null;
       tabStartTime = null;
-      console.log("⏹️ 탭 트래커 비활성화 완료");
+      if (typeof debug !== "undefined")
+        debug.tracker("탭 트래커 비활성화 완료");
     }
     sendResponse({ success: true });
   }

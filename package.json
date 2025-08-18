@@ -8,9 +8,9 @@
     "date-fns-tz": "^3.2.0"
   },
   "scripts": {
-    "build": "webpack --config webpack.config.js",
-    "build:date-fns": "webpack --config webpack.config.js --entry ./src/date-fns-bundle.js",
-    "build:date-fns-tz": "webpack --config webpack.config.js --entry ./src/date-fns-tz-bundle.js"
+    "build": "set NODE_ENV=production && webpack --config webpack.config.js && node build.js",
+    "dev": "set NODE_ENV=development && webpack --config webpack.config.js --watch",
+    "clean": "rimraf dist"
   },
   "keywords": [
     "chrome-extension",
@@ -24,6 +24,9 @@
     "@babel/preset-env": "^7.28.0",
     "babel-loader": "^10.0.0",
     "webpack": "^5.101.1",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "terser-webpack-plugin": "^5.3.10",
+    "rimraf": "^5.0.5",
+    "fs-extra": "^11.2.0"
   }
 }

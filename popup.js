@@ -1,4 +1,29 @@
 // TabbyMansion Popup Script
+// 필요한 date-fns 함수들만 부분 import
+import { format, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { ko } from "date-fns/locale";
+
+// Chart.js에서 필요한 컴포넌트만 선택적 import
+import {
+  Chart,
+  DoughnutController,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+// Debug 유틸리티 import
+import { debug } from "./debug.js";
+
+// 필요한 Chart.js 컴포넌트만 등록
+Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
+
+// 등록 확인
+console.log(
+  "Doughnut controller registered:",
+  Chart.registry.getController("doughnut")
+);
+
 document.addEventListener("DOMContentLoaded", async () => {
   const stopwatchToggle = document.getElementById("stopwatch-toggle");
   const tabTrackerToggle = document.getElementById("tab-tracker-toggle");
@@ -271,13 +296,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 탭 추적기 토글
     tabTrackerToggle.addEventListener("click", async () => {
       const isEnabled = !tabTrackerToggle.classList.contains("active");
-      console.log("🔄 탭 트래커 토글:", isEnabled);
+      debug.tracker("탭 트래커 토글:", isEnabled);
 
       tabTrackerToggle.classList.toggle("active");
 
       try {
         await chrome.storage.local.set({ isTabTrackerEnabled: isEnabled });
-        console.log("💾 탭 트래커 상태 저장됨:", isEnabled);
+        debug.storage("탭 트래커 상태 저장됨:", isEnabled);
 
         // 탭 트래커를 비활성화할 때 기존 데이터 정리
         // if (!isEnabled) {
@@ -294,11 +319,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           action: "updateTabTracker",
           enabled: isEnabled,
         });
-        console.log("📨 백그라운드 응답:", response);
+        debug.log("백그라운드 응답:", response);
 
         // 통계 표시 업데이트 (디바운스 적용)
         debouncedDisplayStats();
-        console.log("📊 통계 업데이트 요청 완료");
+        debug.tracker("통계 업데이트 요청 완료");
 
         // 경고 메시지 업데이트
         if (isEnabled) {
@@ -376,7 +401,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 통계 표시 (차트 + 로그) - 렌더 락 적용
   async function displayStats() {
     if (renderLock) {
-      console.log("🔒 렌더링이 이미 진행 중입니다. 건너뜁니다.");
+      debug.log("렌더링이 이미 진행 중입니다. 건너뜁니다.");
       return;
     }
 
@@ -533,13 +558,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const todayDateEl = document.getElementById("today-date");
     if (todayDateEl) {
       const today = new Date();
-      const options = {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        weekday: "long",
-      };
-      const dateString = today.toLocaleDateString("ko-KR", options);
+      const dateString = format(today, "yyyy년 MMMM d일 EEEE", { locale: ko });
       todayDateEl.textContent = `📅 ${dateString}`;
     }
   }
@@ -553,23 +572,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 오늘 데이터만 필터링
   function filterTodayData(tabLogs) {
     const today = new Date();
-    const todayStart = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-    const todayEnd = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      23,
-      59,
-      59
-    );
+    const todayStart = startOfDay(today);
+    const todayEnd = endOfDay(today);
 
     return tabLogs.filter(log => {
       const logDate = new Date(log.timestamp);
-      return logDate >= todayStart && logDate <= todayEnd;
+      return isWithinInterval(logDate, { start: todayStart, end: todayEnd });
     });
   }
 
@@ -656,7 +664,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Chart.getChart로 기존 인스턴스 확인
     const existingChart = Chart.getChart(usageChart);
     if (existingChart) {
-      console.log("🗑️ 기존 차트 인스턴스 삭제 중...");
+      debug.chart("기존 차트 인스턴스 삭제 중...");
       existingChart.destroy();
     }
 
@@ -728,7 +736,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       color: getChartColor(index),
     }));
 
-    console.log("Creating donut chart with data:", dataWithPercentages);
+    debug.chart("Creating donut chart with data:", dataWithPercentages);
 
     // Chart.js 도넛 차트 생성 (리팩토링된 버전)
     window.popupPie = new Chart(ctx, {
@@ -959,13 +967,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "local") {
       if (changes.tabLogs) {
-        console.log("📦 스토리지 변경 감지, 디바운스된 업데이트 실행");
+        debug.storage("스토리지 변경 감지, 디바운스된 업데이트 실행");
         debouncedDisplayStats();
       }
 
       // 타이머 상태 변경 감지
       if (changes.timerState) {
-        console.log("⏰ 타이머 상태 변경 감지");
+        debug.timer("타이머 상태 변경 감지");
         timerState = changes.timerState.newValue;
         updateTimerDisplay();
         updateTimerControls();

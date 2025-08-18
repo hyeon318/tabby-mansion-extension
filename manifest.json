@@ -24,20 +24,18 @@
       "resources": [
         "stats.html",
         "stats.js",
+        "vendors.js",
         "common.css",
         "popup.css",
         "stats.css",
-        "style.css",
-        "vendor/chart.umd.js",
-        "vendor/date-fns.umd.js",
-        "vendor/date-fns-tz.umd.js"
+        "style.css"
       ],
       "matches": ["<all_urls>"]
     }
   ],
   "icons": {
-    "16": "public/images/icon16.png",
-    "48": "public/images/icon48.png",
-    "128": "public/images/icon128.png"
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
   }
 }
