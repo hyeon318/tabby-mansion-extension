@@ -1,5 +1,78 @@
 // TabbyMansion Background Service Worker
-let isTabTrackerEnabled = false;
+
+// Google Analytics 4 설정
+const GA4_MEASUREMENT_ID = "G-6EYP9W3WCZ";
+const GA4_API_SECRET = "R2rqtts1QzGbj2De-epG0w";
+const GA4_ENDPOINT = "https://www.google-analytics.com/mp/collect";
+
+// GA4 이벤트 전송 함수
+async function sendGA4Event(eventName, parameters = {}) {
+  try {
+    const clientId = await getOrCreateClientId();
+
+    const eventData = {
+      client_id: clientId,
+      events: [
+        {
+          name: eventName,
+          params: {
+            ...parameters,
+            engagement_time_msec: 100,
+          },
+        },
+      ],
+    };
+
+    const response = await fetch(
+      `${GA4_ENDPOINT}?measurement_id=${GA4_MEASUREMENT_ID}&api_secret=${GA4_API_SECRET}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventData),
+      }
+    );
+
+    if (response.ok) {
+      if (typeof debug !== "undefined") {
+        debug.analytics(`GA4 이벤트 전송 성공: ${eventName}`, parameters);
+      }
+    } else {
+      console.warn(`GA4 이벤트 전송 실패: ${eventName}`, response.status);
+    }
+  } catch (error) {
+    console.warn(`GA4 이벤트 전송 오류: ${eventName}`, error);
+  }
+}
+
+// 클라이언트 ID 생성 또는 가져오기
+async function getOrCreateClientId() {
+  try {
+    const result = await chrome.storage.local.get(["ga4_client_id"]);
+    if (result.ga4_client_id) {
+      return result.ga4_client_id;
+    }
+
+    // 새로운 클라이언트 ID 생성
+    const clientId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c == "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      }
+    );
+
+    await chrome.storage.local.set({ ga4_client_id: clientId });
+    return clientId;
+  } catch (error) {
+    console.warn("클라이언트 ID 생성 실패:", error);
+    return "anonymous";
+  }
+}
+
+let isTabTrackerEnabled = true;
 let currentTabId = null;
 let tabStartTime = null; // 탭 시작 시간 추적
 
@@ -13,43 +86,114 @@ let timerState = {
 };
 
 // 확장 프로그램 설치 시 초기 설정
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async details => {
   if (typeof debug !== "undefined")
-    debug.serviceWorker("TabbyMansion 확장 프로그램이 설치되었습니다.");
+    debug.serviceWorker(
+      "TabbyMansion 확장 프로그램이 설치되었습니다. 이유:",
+      details.reason
+    );
 
-  // 기본 설정 초기화
-  await chrome.storage.local.set({
-    isStopwatchEnabled: false,
-    isTabTrackerEnabled: false,
-    tabLogs: [],
-    timerState: {
-      status: "paused",
-      startedAt: null,
-      accumulatedMs: 0,
-      label: "",
-      lastSaveTime: null,
-    },
+  // GA4 설치 이벤트 전송
+  await sendGA4Event("extension_installed", {
+    reason: details.reason,
+    version: chrome.runtime.getManifest().version,
   });
+
+  // 기존 데이터 확인
+  const existingData = await chrome.storage.local.get([
+    "isStopwatchEnabled",
+    "isTabTrackerEnabled",
+    "tabLogs",
+    "timerState",
+  ]);
+
+  // 새로 설치하는 경우에만 초기화 (업데이트나 재활성화 시에는 기존 데이터 보존)
+  if (details.reason === "install") {
+    if (typeof debug !== "undefined")
+      debug.serviceWorker("새로 설치됨 - 기본 설정으로 초기화");
+
+    await chrome.storage.local.set({
+      isStopwatchEnabled: false,
+      isTabTrackerEnabled: true,
+      tabLogs: [],
+      timerState: {
+        status: "paused",
+        startedAt: null,
+        accumulatedMs: 0,
+        label: "",
+        lastSaveTime: null,
+      },
+    });
+
+    // GA4 초기 설정 이벤트
+    await sendGA4Event("extension_initialized", {
+      tab_tracker_enabled: true,
+      stopwatch_enabled: false,
+    });
+  } else {
+    // 업데이트나 재활성화 시에는 누락된 필드만 기본값으로 추가
+    if (typeof debug !== "undefined")
+      debug.serviceWorker("업데이트/재활성화됨 - 기존 설정 보존");
+
+    const updates = {};
+
+    if (existingData.isStopwatchEnabled === undefined) {
+      updates.isStopwatchEnabled = false;
+    }
+    if (existingData.isTabTrackerEnabled === undefined) {
+      updates.isTabTrackerEnabled = true;
+    }
+    if (!existingData.tabLogs) {
+      updates.tabLogs = [];
+    }
+    if (!existingData.timerState) {
+      updates.timerState = {
+        status: "paused",
+        startedAt: null,
+        accumulatedMs: 0,
+        label: "",
+        lastSaveTime: null,
+      };
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await chrome.storage.local.set(updates);
+      if (typeof debug !== "undefined")
+        debug.serviceWorker("누락된 설정 추가:", updates);
+    }
+
+    // GA4 업데이트 이벤트
+    await sendGA4Event("extension_updated", {
+      reason: details.reason,
+      version: chrome.runtime.getManifest().version,
+    });
+
+    // 업데이트 시 패치 노트 확인 상태 초기화
+    await chrome.storage.local.set({ patchNotesSeen: false });
+  }
 
   // 기존 데이터 마이그레이션 수행
   await migrateLegacyStats();
 
-  // 저장된 타이머 상태 로드
+  // 저장된 상태 로드
   await loadTimerState();
+  await loadTabTrackerState();
 });
 
-// Service Worker 시작 시 타이머 상태 복원
+// Service Worker 시작 시 상태 복원
 chrome.runtime.onStartup.addListener(async () => {
   if (typeof debug !== "undefined")
     debug.serviceWorker("TabbyMansion Service Worker 시작됨");
   await loadTimerState();
+  await loadTabTrackerState();
 });
 
-// Service Worker 활성화 시 타이머 상태 복원
+// Service Worker 활성화 시 상태 복원
 self.addEventListener("activate", async event => {
   if (typeof debug !== "undefined")
     debug.serviceWorker("TabbyMansion Service Worker 활성화됨");
   await loadTimerState();
+  await loadTabTrackerState();
 });
 
 // Service Worker 종료 전 타이머 상태 저장
@@ -142,8 +286,38 @@ async function saveTimerState() {
   }
 }
 
+// 탭 트래커 상태 로드
+async function loadTabTrackerState() {
+  try {
+    const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
+    if (result.isTabTrackerEnabled !== undefined) {
+      isTabTrackerEnabled = result.isTabTrackerEnabled;
+      if (typeof debug !== "undefined")
+        debug.tracker("탭 트래커 상태 복원됨:", isTabTrackerEnabled);
+
+      // 탭 트래커가 활성화되어 있다면 현재 탭 추적 시작
+      if (isTabTrackerEnabled) {
+        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+          if (tabs[0]) {
+            if (typeof debug !== "undefined")
+              debug.tracker(
+                "Service Worker 시작 시 활성 탭 추적 시작:",
+                tabs[0].url
+              );
+            currentTabId = tabs[0].id;
+            tabStartTime = Date.now();
+            logTabActivity(tabs[0], tabStartTime);
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error("❌ 탭 트래커 상태 로드 실패:", error);
+  }
+}
+
 // 타이머 시작
-function startTimer(label = "") {
+async function startTimer(label = "") {
   if (timerState.status === "running") {
     if (typeof debug !== "undefined")
       debug.timer("타이머가 이미 실행 중입니다");
@@ -156,6 +330,12 @@ function startTimer(label = "") {
 
   saveTimerState();
   broadcastTimerState();
+
+  // GA4 타이머 시작 이벤트
+  await sendGA4Event("timer_started", {
+    has_label: !!label,
+    label_length: label.length,
+  });
 
   // 타이머 실행 중일 때 주기적으로 상태 저장 (Service Worker 재시작 대비)
   if (timerState.saveInterval) {
@@ -172,7 +352,7 @@ function startTimer(label = "") {
 }
 
 // 타이머 일시정지
-function pauseTimer() {
+async function pauseTimer() {
   if (timerState.status !== "running") {
     if (typeof debug !== "undefined")
       debug.timer("타이머가 실행 중이 아닙니다");
@@ -193,12 +373,19 @@ function pauseTimer() {
 
   saveTimerState();
   broadcastTimerState();
+
+  // GA4 타이머 일시정지 이벤트
+  await sendGA4Event("timer_paused", {
+    accumulated_time_seconds: Math.round(timerState.accumulatedMs / 1000),
+    current_run_seconds: Math.round(currentRun / 1000),
+  });
+
   if (typeof debug !== "undefined") debug.timer("타이머 일시정지:", timerState);
   return true;
 }
 
 // 타이머 리셋
-function resetTimer() {
+async function resetTimer() {
   if (typeof debug !== "undefined") debug.timer("타이머 리셋 시작");
 
   // 주기적 저장 인터벌 정리
@@ -215,6 +402,10 @@ function resetTimer() {
 
   saveTimerState();
   broadcastTimerState();
+
+  // GA4 타이머 리셋 이벤트
+  await sendGA4Event("timer_reset");
+
   if (typeof debug !== "undefined") debug.timer("타이머 리셋 완료");
   return true;
 }
@@ -396,8 +587,22 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
             ? log.startTime
             : new Date(log.timestamp).getTime();
         const actualTime = Date.now() - start;
-        log.actualTime = actualTime;
+
+        // 비정상적으로 긴 시간은 제한 (예: 24시간 이상)
+        const maxReasonableTime = 24 * 60 * 60 * 1000; // 24시간
+        const finalActualTime =
+          actualTime > maxReasonableTime ? maxReasonableTime : actualTime;
+
+        log.actualTime = finalActualTime;
         log.endTime = new Date().toISOString();
+
+        if (typeof debug !== "undefined") {
+          debug.timer(
+            `탭 ${tabId} 종료 시 실제 사용 시간 기록: ${Math.round(
+              finalActualTime / 1000
+            )}초`
+          );
+        }
         break;
       }
     }
@@ -425,10 +630,24 @@ async function recordTabEndTime(tabId, startTime) {
     for (let i = tabLogs.length - 1; i >= 0; i--) {
       const log = tabLogs[i];
       if (log.tabId === tabId && !log.actualTime) {
-        // 실제 사용 시간 계산 및 저장
+        // 실제 사용 시간 계산 및 저장 (탭 활성화 시간만)
         const actualTime = Date.now() - startTime;
-        log.actualTime = actualTime;
+
+        // 비정상적으로 긴 시간은 제한 (예: 24시간 이상)
+        const maxReasonableTime = 24 * 60 * 60 * 1000; // 24시간
+        const finalActualTime =
+          actualTime > maxReasonableTime ? maxReasonableTime : actualTime;
+
+        log.actualTime = finalActualTime;
         log.endTime = new Date().toISOString();
+
+        if (typeof debug !== "undefined") {
+          debug.timer(
+            `탭 ${tabId} 실제 사용 시간 기록: ${Math.round(
+              finalActualTime / 1000
+            )}초`
+          );
+        }
         break;
       }
     }
@@ -484,9 +703,22 @@ async function logTabActivity(tab, startTime = null) {
 
   tabLogs.push(logEntry);
 
-  // 최근 1000개 로그만 유지 (더 많은 데이터 보존)
-  if (tabLogs.length > 1000) {
-    tabLogs.splice(0, tabLogs.length - 1000);
+  // 날짜 기반 정리 (90일 이상 된 로그만 삭제)
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const filteredLogs = tabLogs.filter(log => {
+    const logDate = new Date(log.timestamp);
+    return logDate >= ninetyDaysAgo;
+  });
+
+  // 필터링된 로그로 교체
+  if (filteredLogs.length !== tabLogs.length) {
+    if (typeof debug !== "undefined") {
+      debug.storage(
+        `오래된 로그 ${tabLogs.length - filteredLogs.length}개 삭제됨`
+      );
+    }
+    tabLogs.length = 0;
+    tabLogs.push(...filteredLogs);
   }
 
   // 실시간 통계 업데이트
@@ -631,15 +863,15 @@ async function updateDailyStats(logEntry, currentStats) {
     });
   });
 
-  // 30일 이상 된 데이터 정리
-  const thirtyDaysAgo = new Date(date.getTime() - 30 * 24 * 60 * 60 * 1000);
-  Object.keys(statsToSave).forEach(key => {
-    const keyDate = new Date(key);
-    if (keyDate < thirtyDaysAgo) {
-      delete statsToSave[key];
-      delete currentStats[key]; // 메모리에서도 제거
-    }
-  });
+  // 30일 자동 정리 기능 비활성화 (데이터 손실 방지)
+  // const thirtyDaysAgo = new Date(date.getTime() - 30 * 24 * 60 * 60 * 1000);
+  // Object.keys(statsToSave).forEach(key => {
+  //   const keyDate = new Date(key);
+  //   if (keyDate < thirtyDaysAgo) {
+  //     delete statsToSave[key];
+  //     delete currentStats[key]; // 메모리에서도 제거
+  //   }
+  // });
 
   await chrome.storage.local.set({ dailyStats: statsToSave });
 }
@@ -653,6 +885,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     isTabTrackerEnabled = request.enabled;
     if (typeof debug !== "undefined")
       debug.tracker("탭 트래커 상태 변경:", isTabTrackerEnabled);
+
+    // GA4 탭 트래커 토글 이벤트
+    sendGA4Event("tab_tracker_toggled", {
+      enabled: request.enabled,
+    });
 
     if (request.enabled) {
       // 현재 활성 탭 확인
@@ -679,17 +916,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // 타이머 관련 메시지 처리
   else if (request.action === "TIMER_START") {
-    const success = startTimer(request.label || "");
-    sendResponse({ success, state: getTimerState() });
+    startTimer(request.label || "").then(success => {
+      sendResponse({ success, state: getTimerState() });
+    });
+    return true;
   } else if (request.action === "TIMER_PAUSE") {
-    const success = pauseTimer();
-    sendResponse({ success, state: getTimerState() });
+    pauseTimer().then(success => {
+      sendResponse({ success, state: getTimerState() });
+    });
+    return true;
   } else if (request.action === "TIMER_RESET") {
-    const success = resetTimer();
-    sendResponse({ success, state: getTimerState() });
+    resetTimer().then(success => {
+      sendResponse({ success, state: getTimerState() });
+    });
+    return true;
   } else if (request.action === "TIMER_GET") {
     const state = getTimerState();
     sendResponse({ success: true, state });
+  } else if (request.action === "GA4_EVENT") {
+    // 팝업에서 전송된 GA4 이벤트 처리
+    sendGA4Event(request.eventName, request.parameters || {});
+    sendResponse({ success: true });
   }
 
   return true;

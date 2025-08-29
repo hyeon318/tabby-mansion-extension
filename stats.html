@@ -309,13 +309,19 @@
               조회 기간 내 접속 페이지 목록
             </div>
             <div class="timeline-controls">
-              <input
-                class="timeline-search-input"
-                id="timeline-search"
-                type="text"
-                placeholder="제목/도메인/주소 검색"
-                data-i18n-placeholder="searchTitleDomainAddress"
-              />
+              <div class="search-container">
+                <input
+                  class="timeline-search-input"
+                  id="timeline-search"
+                  type="text"
+                  placeholder="제목, 도메인, 주소로 검색 (여러 키워드 가능)"
+                  data-i18n-placeholder="searchTitleDomainAddress"
+                />
+                <div
+                  class="search-results-count"
+                  id="search-results-count"
+                ></div>
+              </div>
             </div>
           </div>
           <div class="timeline-container" id="timeline-container">

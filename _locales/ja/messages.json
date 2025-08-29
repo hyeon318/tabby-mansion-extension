@@ -99,6 +99,18 @@
     "message": "🇺🇸 ニューヨーク (EST/EDT)",
     "description": "New York timezone option"
   },
+  "patchNotes": {
+    "message": "パッチノート",
+    "description": "Patch notes title"
+  },
+  "gotIt": {
+    "message": "了解",
+    "description": "Got it button text"
+  },
+  "patchMessageV102": {
+    "message": "拡張機能のアップデート時にデータが削除される不具合を修正しました。<br/>今後はアップデート後もデータが安全に保持されます。 <br/>ご不便をおかけしましたことを心よりお詫び申し上げます。",
+    "description": "Patch message for version 1.0.7"
+  },
   "losAngeles": {
     "message": "🇺🇸 ロサンゼルス (PST/PDT)",
     "description": "Los Angeles timezone option"
@@ -303,10 +315,6 @@
   "deleteByDate": {
     "message": "日付別記録削除",
     "description": "Delete by date section title"
-  },
-  "selectDateToDelete": {
-    "message": "削除する日付を選択",
-    "description": "Delete date input placeholder"
   },
   "deleteSelectedDateRecords": {
     "message": "選択した日付の記録を削除",
@@ -531,5 +539,69 @@
   "popupTrackerOffDesc": {
     "message": "時間追跡を開始するには有効にしてください",
     "description": "Popup tracker off description"
+  },
+  "filterApplyError": {
+    "message": "フィルター適用中にエラーが発生しました。",
+    "description": "Error message when applying filters fails"
+  },
+  "dataRefreshError": {
+    "message": "データ更新中にエラーが発生しました。",
+    "description": "Error message when refreshing data fails"
+  },
+  "selectDateToDelete": {
+    "message": "削除する日付を選択してください。",
+    "description": "Message to select date for deletion"
+  },
+  "confirmDeleteDate": {
+    "message": "選択した日付（{date}）のすべての記録を削除しますか？\n\nこの操作は元に戻せません。",
+    "description": "Confirmation message for deleting records by date"
+  },
+  "dateRecordsDeleted": {
+    "message": "{date}の記録が正常に削除されました。",
+    "description": "Success message when date records are deleted"
+  },
+  "deleteRecordsError": {
+    "message": "記録削除中にエラーが発生しました。",
+    "description": "Error message when deleting records fails"
+  },
+  "confirmDeleteAll": {
+    "message": "すべてのタブアクティビティ記録を削除しますか？\n\nこの操作は元に戻せず、すべてのデータが永続的に削除されます。",
+    "description": "Confirmation message for deleting all records"
+  },
+  "allRecordsDeleted": {
+    "message": "すべての記録が正常に削除されました。",
+    "description": "Success message when all records are deleted"
+  },
+  "languageChangedMessage": {
+    "message": "言語が{language}に変更されました。ページが更新されます。",
+    "description": "Message when language is changed successfully"
+  },
+  "timezoneLibraryError": {
+    "message": "タイムゾーン処理ライブラリが読み込まれていません。ページを更新してください。",
+    "description": "Error message when timezone library is not loaded"
+  },
+  "tabTrackerDisabled": {
+    "message": "タブトラッカー無効",
+    "description": "Tab tracker disabled warning title"
+  },
+  "tabTrackerDisabledDesc": {
+    "message": "正確な時間測定のためにタブトラッカーを有効にしてください。",
+    "description": "Tab tracker disabled warning description"
+  },
+  "dateRecordsDeleteError": {
+    "message": "日付別記録削除失敗",
+    "description": "Console error message for date records deletion failure"
+  },
+  "allRecordsDeleteError": {
+    "message": "全記録削除失敗",
+    "description": "Console error message for all records deletion failure"
+  },
+  "languageSettingsLoadError": {
+    "message": "言語設定読み込み失敗",
+    "description": "Console error message for language settings load failure"
+  },
+  "languageChangeError": {
+    "message": "言語変更失敗",
+    "description": "Console error message for language change failure"
   }
 }

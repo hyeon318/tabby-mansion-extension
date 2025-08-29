@@ -2,12 +2,14 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "short_name": "__MSG_extShortName__",
-  "version": "1.0",
+  "version": "1.0.2",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": ["storage", "tabs", "activeTab", "windows"],
+  "host_permissions": ["https://www.google-analytics.com/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -18,7 +20,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "TabbyMansion"
+    "default_title": "Tabby Mansion - Timer & Tracker"
   },
   "web_accessible_resources": [
     {

@@ -28,15 +28,47 @@ function createStopwatch() {
     <div class="timer-display" id="timer-display">00:00:00</div>
     <div class="timer-label" id="timer-label"></div>
     <div class="timer-controls">
-      <button class="timer-btn timer-start" id="timer-start">시작</button>
-      <button class="timer-btn timer-pause" id="timer-pause" style="display: none;">일시정지</button>
-      <button class="timer-btn timer-reset" id="timer-reset">리셋</button>
+      <button class="timer-btn timer-start" id="timer-start">Start</button>
+      <button class="timer-btn timer-pause" id="timer-pause" style="display: none;">Stop</button>
+      <button class="timer-btn timer-reset" id="timer-reset">Reset</button>
     </div>
   `;
 
   document.body.appendChild(stopwatchElement);
   setupEventListeners();
   makeDraggable();
+
+  // 언어 설정에 따라 버튼 텍스트 업데이트
+  updateButtonTexts();
+}
+
+// 언어 설정에 따라 버튼 텍스트 업데이트
+async function updateButtonTexts() {
+  try {
+    const result = await chrome.storage.local.get(["language"]);
+    const language = result.language || "en";
+
+    const startBtn = document.getElementById("timer-start");
+    const pauseBtn = document.getElementById("timer-pause");
+    const resetBtn = document.getElementById("timer-reset");
+
+    if (language === "ko") {
+      if (startBtn) startBtn.textContent = "시작";
+      if (pauseBtn) pauseBtn.textContent = "일시정지";
+      if (resetBtn) resetBtn.textContent = "리셋";
+    } else if (language === "ja") {
+      if (startBtn) startBtn.textContent = "開始";
+      if (pauseBtn) pauseBtn.textContent = "一時停止";
+      if (resetBtn) resetBtn.textContent = "リセット";
+    } else {
+      // 영어 (기본값)
+      if (startBtn) startBtn.textContent = "Start";
+      if (pauseBtn) pauseBtn.textContent = "Stop";
+      if (resetBtn) resetBtn.textContent = "Reset";
+    }
+  } catch (error) {
+    console.error("언어 설정 로드 실패:", error);
+  }
 }
 
 // 이벤트 리스너 설정
@@ -322,6 +354,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     updateTimerDisplay();
     updateTimerControls();
     startTimerDisplay();
+  } else if (request.action === "LANGUAGE_CHANGED") {
+    // 언어 설정 변경 시 버튼 텍스트 업데이트
+    updateButtonTexts();
+    sendResponse({ success: true });
   }
 });
 

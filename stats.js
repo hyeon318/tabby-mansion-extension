@@ -154,7 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentView = "daily";
   let currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   let currentLocale = navigator.language || "ko-KR";
-  let isTabTrackerEnabled = false; // 탭 트래커 상태 전역 변수
+  let isTabTrackerEnabled = true; // 탭 트래커 상태 전역 변수 (기본값 true)
 
   let currentFilters = {
     startDate: null,
@@ -237,6 +237,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 기존 formatDateLabel 함수 제거 - utils/datetime.js의 fmtTimeListDate 사용
 
   // =========================================================================
+  // Google Analytics 4 추적
+  // =========================================================================
+
+  // GA4 이벤트 전송 함수
+  async function sendGA4Event(eventName, parameters = {}) {
+    try {
+      await chrome.runtime.sendMessage({
+        action: "GA4_EVENT",
+        eventName: eventName,
+        parameters: parameters,
+      });
+    } catch (error) {
+      console.warn("GA4 이벤트 전송 실패:", error);
+    }
+  }
+
+  // =========================================================================
   // 데이터 로딩 및 필터링
   // =========================================================================
 
@@ -255,7 +272,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           "dailyStats",
         ]);
         allTabLogs = result.tabLogs || [];
-        isTabTrackerEnabled = result.isTabTrackerEnabled || false;
+        isTabTrackerEnabled =
+          result.isTabTrackerEnabled !== undefined
+            ? result.isTabTrackerEnabled
+            : true;
 
         // dailyStats titles 정규화(참조용)
         if (result.dailyStats) {
@@ -338,7 +358,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   /** 추정 ms(동일 탭/전역 next, endTime, actualTime 고려) */
   function getEstimatedTime(log, index = 0, logs = []) {
     const AVERAGE = 30000; // 30s
-    if (log.actualTime && log.actualTime > 0) return log.actualTime;
+    const MAX_TIME = 1800000; // 30분으로 제한 (2시간 59분 문제 해결)
+
+    if (log.actualTime && log.actualTime > 0) {
+      return Math.min(log.actualTime, MAX_TIME);
+    }
 
     const curMs = new Date(log.timestamp).getTime();
     if (!Number.isFinite(curMs)) return AVERAGE;
@@ -346,11 +370,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (index < logs.length - 1) {
       const nxt = new Date(logs[index + 1]?.timestamp);
       const diff = nxt - curMs;
-      if (Number.isFinite(diff) && diff > 0 && diff < 10800000) return diff;
+      if (Number.isFinite(diff) && diff > 0 && diff < MAX_TIME) return diff;
     } else {
       if (isTabTrackerEnabled) {
         const diff = Date.now() - curMs;
-        if (Number.isFinite(diff) && diff > 0) return Math.min(diff, 10800000);
+        if (Number.isFinite(diff) && diff > 0) return Math.min(diff, MAX_TIME);
       } else {
         return AVERAGE;
       }
@@ -521,9 +545,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function initializePage() {
     // date-fns-tz가 import되었는지 확인
     if (typeof formatInTimeZone === "undefined") {
-      alert(
-        "타임존 처리 라이브러리가 로드되지 않았습니다. 페이지를 새로고침해주세요."
-      );
+      alert(i18n.getMessage("timezoneLibraryError"));
       return;
     }
 
@@ -565,8 +587,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         z-index:1000;max-width:300px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;animation:slideIn .3s ease-out;">
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:20px;">⚠️</span>
-          <div><div style="font-weight:bold;margin-bottom:5px;">탭 트래커 비활성화</div>
-          <div style="font-size:14px;opacity:.9;">정확한 사용시간 측정을 위해 탭 트래커를 활성화해주세요.</div></div>
+          <div><div style="font-weight:bold;margin-bottom:5px;">${i18n.getMessage(
+            "tabTrackerDisabled"
+          )}</div>
+          <div style="font-size:14px;opacity:.9;">${i18n.getMessage(
+            "tabTrackerDisabledDesc"
+          )}</div></div>
         </div>
         <button onclick="closeTabTrackerWarning()" style="
           position:absolute;top:5px;right:5px;background:none;border:none;color:white;
@@ -621,14 +647,62 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 이벤트 핸들러들
   // =========================================================================
   function setupEventListeners() {
-    applyFilterBtn?.addEventListener("click", refreshData);
-    resetFilterBtn?.addEventListener("click", resetFilters);
-    refreshDataBtn?.addEventListener("click", refreshData);
-    exportDataBtn?.addEventListener("click", exportData);
+    applyFilterBtn?.addEventListener("click", async () => {
+      await sendGA4Event("filter_applied", {
+        filter_type: "date_time_site_filter",
+        filter_description: "날짜/시간/사이트 필터 적용",
+      });
+      refreshData();
+    });
+    resetFilterBtn?.addEventListener("click", async () => {
+      await sendGA4Event("filter_reset", {
+        filter_type: "all_filters_reset",
+        filter_description: "모든 필터 초기화",
+      });
+      resetFilters();
+    });
+    refreshDataBtn?.addEventListener("click", async () => {
+      await sendGA4Event("data_refreshed", {
+        refresh_type: "manual_refresh",
+        refresh_description: "수동 데이터 새로고침",
+      });
+      refreshData();
+    });
+    exportDataBtn?.addEventListener("click", async () => {
+      await sendGA4Event("data_exported", {
+        export_type: "csv_export",
+        export_description: "CSV 형식으로 데이터 내보내기",
+      });
+      exportData();
+    });
 
-    viewDailyBtn?.addEventListener("click", () => setView("daily"));
-    viewHourlyBtn?.addEventListener("click", () => setView("hourly"));
-    viewWeeklyBtn?.addEventListener("click", () => setView("weekly"));
+    viewDailyBtn?.addEventListener("click", async () => {
+      await sendGA4Event("view_changed", {
+        view: "daily",
+        view_type: "daily_view",
+        view_description: "일별 통계 보기",
+        view_granularity: "day",
+      });
+      setView("daily");
+    });
+    viewHourlyBtn?.addEventListener("click", async () => {
+      await sendGA4Event("view_changed", {
+        view: "hourly",
+        view_type: "hourly_view",
+        view_description: "시간별 통계 보기",
+        view_granularity: "hour",
+      });
+      setView("hourly");
+    });
+    viewWeeklyBtn?.addEventListener("click", async () => {
+      await sendGA4Event("view_changed", {
+        view: "weekly",
+        view_type: "weekly_view",
+        view_description: "주별 통계 보기",
+        view_granularity: "week",
+      });
+      setView("weekly");
+    });
 
     timezoneSelectEl?.addEventListener("change", async () => {
       currentTimezone = timezoneSelectEl.value;
@@ -654,8 +728,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // 기록 관리 이벤트 리스너
-    deleteDateBtn?.addEventListener("click", deleteDataByDate);
-    deleteAllBtn?.addEventListener("click", deleteAllData);
+    deleteDateBtn?.addEventListener("click", async () => {
+      await sendGA4Event("data_deleted_by_date", {
+        delete_type: "specific_date_deletion",
+        delete_description: "특정 날짜 데이터 삭제",
+      });
+      deleteDataByDate();
+    });
+    deleteAllBtn?.addEventListener("click", async () => {
+      await sendGA4Event("all_data_deleted", {
+        delete_type: "complete_data_deletion",
+        delete_description: "전체 데이터 삭제",
+      });
+      deleteAllData();
+    });
   }
 
   // =========================================================================
@@ -675,7 +761,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await displayResults();
     } catch (e) {
       console.error("Error applying filters:", e);
-      alert("필터 적용 중 오류가 발생했습니다.");
+      alert(i18n.getMessage("filterApplyError"));
     } finally {
       showLoading(false);
     }
@@ -708,7 +794,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await applyFilters();
     } catch (e) {
       console.error("Error refreshing data:", e);
-      alert("데이터 새로고침 중 오류가 발생했습니다.");
+      alert(i18n.getMessage("dataRefreshError"));
     } finally {
       refreshDataBtn.disabled = false;
 
@@ -1654,88 +1740,135 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 검색
     const searchInput = document.getElementById("timeline-search");
     if (searchInput) {
+      let searchTimeout;
       searchInput.oninput = () => {
-        const q = (searchInput.value || "").trim().toLowerCase();
-        if (!q) {
-          updateTimeline();
-          return;
-        }
-        const filtered = filteredData.filter(r => {
-          const t = (r.title || "").toLowerCase();
-          const u = (r.url || "").toLowerCase();
-          let d = "";
-          try {
-            d = new URL(r.url).hostname.replace("www.", "").toLowerCase();
-          } catch {}
-          return t.includes(q) || u.includes(q) || d.includes(q);
-        });
-        const idxMap = new Map(filteredData.map((r, i) => [r, i]));
-        const sortedTmp = [...filtered].sort(
-          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-        );
-        let tmp = `
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          const q = (searchInput.value || "").trim().toLowerCase();
+
+          // 검색 결과 수 표시 초기화
+          const searchResultsCount = document.getElementById(
+            "search-results-count"
+          );
+          if (searchResultsCount) {
+            searchResultsCount.classList.remove("show");
+          }
+
+          if (!q) {
+            updateTimeline();
+            return;
+          }
+
+          // 검색어를 공백으로 분리하여 여러 키워드로 검색
+          const keywords = q.split(/\s+/).filter(k => k.length > 0);
+
+          const filtered = filteredData.filter(r => {
+            const t = (r.title || "").toLowerCase();
+            const u = (r.url || "").toLowerCase();
+            let d = "";
+            try {
+              d = new URL(r.url).hostname.replace("www.", "").toLowerCase();
+            } catch {}
+
+            // 모든 키워드가 제목, URL, 또는 도메인에 포함되어야 함
+            return keywords.every(
+              keyword =>
+                t.includes(keyword) ||
+                u.includes(keyword) ||
+                d.includes(keyword)
+            );
+          });
+
+          const idxMap = new Map(filteredData.map((r, i) => [r, i]));
+          const sortedTmp = [...filtered].sort(
+            (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+          );
+
+          // 검색 결과 수 표시
+          if (searchResultsCount) {
+            if (q) {
+              searchResultsCount.textContent = `${sortedTmp.length}개`;
+              searchResultsCount.classList.add("show");
+            } else {
+              searchResultsCount.classList.remove("show");
+            }
+          }
+
+          let tmp = `
           <div class="timeline-day">
             <div class="day-header" data-i18n="listOfAccessedPages">조회 기간 내 접속 페이지 목록</div>
             <div class="day-summary" data-i18n="totalPages" data-count="${sortedTmp.length}">총 ${sortedTmp.length}개 페이지</div>
         `;
-        sortedTmp.forEach((rec, i) => {
-          const iAsc = idxMap.get(rec);
-          const sec = getEstimatedTimeInSeconds(rec, iAsc, filteredData);
-          const vt = new Date(rec.timestamp).toLocaleString(locale, {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: currentLanguage !== "en",
-          });
-          const title = rec.title || "";
-          const td = title.length > 40 ? title.substring(0, 37) + "..." : title;
-          let du = rec.url || "";
-          if (du.length > 60) {
-            const proto = du.startsWith("https://")
-              ? "https://"
-              : du.startsWith("http://")
-              ? "http://"
-              : "";
-            const dom = du.replace(/^https?:\/\//, "").split("/")[0];
-            const path = du.replace(/^https?:\/\/[^\/]+/, "");
-            if (path.length > 0) {
-              const maxLen = 60 - proto.length - dom.length - 3;
-              if (path.length > maxLen) {
-                const last = path.substring(
-                  path.length - Math.floor(maxLen / 2)
-                );
-                du = `${proto}${dom}...${last}`;
-              }
-            } else du = `${proto}${dom}`;
-          }
-          tmp += `
-            <div class="site-entry" data-url="${esc(
-              rec.url
-            )}" style="cursor:pointer;">
-              <div class="site-info">
-                <div class="site-title-col" title="${esc(title)}">${
-            i + 1
-          }. ${esc(td)}</div>
-                <div class="site-url-col" title="${esc(rec.url)}">${esc(
-            du
-          )}</div>
-              </div>
-              <div class="site-time"><span class="visit-time">${esc(
-                vt
-              )}</span> | <span class="duration">${esc(
-            fmtDurationSec(sec)
-          )}</span></div>
-            </div>`;
-        });
-        tmp += "</div>";
-        timelineContainer.innerHTML = tmp;
 
-        // 검색 결과에도 다국어 적용
-        if (typeof i18n !== "undefined" && i18n.updatePageText) {
-          i18n.updatePageText();
-        }
+          if (sortedTmp.length === 0) {
+            tmp += `
+            <div class="no-data" style="text-align: center; padding: 20px; color: rgba(255, 255, 255, 0.6);">
+              검색 결과가 없습니다. 다른 키워드로 검색해보세요.
+            </div>
+          `;
+          } else {
+            sortedTmp.forEach((rec, i) => {
+              const iAsc = idxMap.get(rec);
+              const sec = getEstimatedTimeInSeconds(rec, iAsc, filteredData);
+              const vt = new Date(rec.timestamp).toLocaleString(locale, {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: currentLanguage !== "en",
+              });
+              const title = rec.title || "";
+              const td =
+                title.length > 40 ? title.substring(0, 37) + "..." : title;
+              let du = rec.url || "";
+              if (du.length > 60) {
+                const proto = du.startsWith("https://")
+                  ? "https://"
+                  : du.startsWith("http://")
+                  ? "http://"
+                  : "";
+                const dom = du.replace(/^https?:\/\//, "").split("/")[0];
+                const path = du.replace(/^https?:\/\/[^\/]+/, "");
+                if (path.length > 0) {
+                  const maxLen = 60 - proto.length - dom.length - 3;
+                  if (path.length > maxLen) {
+                    const last = path.substring(
+                      path.length - Math.floor(maxLen / 2)
+                    );
+                    du = `${proto}${dom}...${last}`;
+                  }
+                } else du = `${proto}${dom}`;
+              }
+              tmp += `
+              <div class="site-entry" data-url="${esc(
+                rec.url
+              )}" style="cursor:pointer;">
+                <div class="site-info">
+                  <div class="site-title-col" title="${esc(title)}">${
+                i + 1
+              }. ${esc(td)}</div>
+                  <div class="site-url-col" title="${esc(rec.url)}">${esc(
+                du
+              )}</div>
+                </div>
+                <div class="site-time"><span class="visit-time">${esc(
+                  vt
+                )}</span> | <span class="duration">${esc(
+                fmtDurationSec(sec)
+              )}</span></div>
+              </div>`;
+            });
+          }
+
+          tmp += "</div>";
+          timelineContainer.innerHTML = tmp;
+
+          // 검색 결과에도 다국어 적용
+          if (typeof i18n !== "undefined" && i18n.updatePageText) {
+            i18n.updatePageText();
+          }
+        }, 300); // 300ms 디바운싱
       };
     }
   }
@@ -1915,14 +2048,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function deleteDataByDate() {
     const selectedDate = deleteDateEl.value;
     if (!selectedDate) {
-      alert("삭제할 날짜를 선택해주세요.");
+      alert(i18n.getMessage("selectDateToDelete"));
       return;
     }
 
     if (
-      !confirm(
-        `선택한 날짜 (${selectedDate})의 모든 기록을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`
-      )
+      !confirm(i18n.getMessage("confirmDeleteDate", { date: selectedDate }))
     ) {
       return;
     }
@@ -1951,24 +2082,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       await loadData();
       await applyFilters();
 
-      alert(`${selectedDate} 날짜의 기록이 성공적으로 삭제되었습니다.`);
+      alert(i18n.getMessage("dateRecordsDeleted", { date: selectedDate }));
 
       // 날짜 입력 필드 초기화
       deleteDateEl.value = "";
     } catch (error) {
-      console.error("날짜별 기록 삭제 실패:", error);
-      alert("기록 삭제 중 오류가 발생했습니다.");
+      console.error(i18n.getMessage("dateRecordsDeleteError") + ":", error);
+      alert(i18n.getMessage("deleteRecordsError"));
     } finally {
       showLoading(false);
     }
   }
 
   async function deleteAllData() {
-    if (
-      !confirm(
-        "모든 탭 활동 기록을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다."
-      )
-    ) {
+    if (!confirm(i18n.getMessage("confirmDeleteAll"))) {
       return;
     }
 
@@ -1982,10 +2109,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       await loadData();
       await applyFilters();
 
-      alert("모든 기록이 성공적으로 삭제되었습니다.");
+      alert(i18n.getMessage("allRecordsDeleted"));
     } catch (error) {
-      console.error("전체 기록 삭제 실패:", error);
-      alert("기록 삭제 중 오류가 발생했습니다.");
+      console.error(i18n.getMessage("allRecordsDeleteError") + ":", error);
+      alert(i18n.getMessage("deleteRecordsError"));
     } finally {
       showLoading(false);
     }
@@ -2039,7 +2166,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           languageNames[currentLanguage] || currentLanguage;
       }
     } catch (error) {
-      console.error("언어 설정 로드 실패:", error);
+      console.error(i18n.getMessage("languageSettingsLoadError") + ":", error);
     }
   }
 
@@ -2059,8 +2186,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      console.error("언어 변경 실패:", error);
-      alert("언어 변경 중 오류가 발생했습니다.");
+      console.error(i18n.getMessage("languageChangeError") + ":", error);
+      alert(i18n.getMessage("languageChangeError"));
     }
   }
 
@@ -2071,7 +2198,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       ja: "日本語",
     };
 
-    const message = `언어가 ${languageNames[language]}로 변경되었습니다. 페이지가 새로고침됩니다.`;
+    const message = i18n.getMessage("languageChangedMessage", {
+      language: languageNames[language],
+    });
 
     // 메시지 요소 생성
     const messageEl = document.createElement("div");

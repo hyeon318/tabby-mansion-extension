@@ -502,6 +502,29 @@ select:disabled {
   background: rgba(255, 255, 255, 0.25);
 }
 
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-results-count {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(102, 126, 234, 0.8);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: none;
+}
+
+.search-results-count.show {
+  display: block;
+}
+
 .timeline-search input::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }

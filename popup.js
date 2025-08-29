@@ -93,6 +93,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 오늘 날짜 표시
   updateTodayDate();
 
+  // 패치 노트 표시
+  await showPatchNotes();
+
   // 차트 및 로그 표시
   await displayStats();
 
@@ -111,11 +114,85 @@ document.addEventListener("DOMContentLoaded", async () => {
         stopwatchToggle.classList.add("active");
       }
 
-      if (result.isTabTrackerEnabled) {
+      // 탭 트래커 기본값을 true로 설정 (undefined인 경우)
+      if (result.isTabTrackerEnabled === undefined) {
+        // 기본값을 true로 설정하고 저장
+        await chrome.storage.local.set({ isTabTrackerEnabled: true });
+        tabTrackerToggle.classList.add("active");
+        console.log("탭 트래커 기본값을 true로 설정했습니다.");
+      } else if (result.isTabTrackerEnabled) {
         tabTrackerToggle.classList.add("active");
       }
     } catch (error) {
       console.error("초기 상태 로드 실패:", error);
+    }
+  }
+
+  // 패치 노트 표시
+  async function showPatchNotes() {
+    try {
+      const currentVersion = chrome.runtime.getManifest().version;
+      const result = await chrome.storage.local.get(["patchNotesSeen"]);
+
+      // 패치 노트 메시지 가져오기
+      const patchMessageKey = `patchMessageV${currentVersion.replace(
+        /\./g,
+        ""
+      )}`;
+      const patchMessage = i18n.getMessage(patchMessageKey);
+
+      // 해당 버전의 패치 메시지가 없으면 패치 노트 영역 전체 숨김
+      // i18n.getMessage()는 키를 찾지 못하면 키 값 자체를 반환하므로 이를 체크
+      if (!patchMessage || patchMessage === patchMessageKey) {
+        const patchNotesEl = document.getElementById("patch-notes");
+        if (patchNotesEl) {
+          patchNotesEl.style.display = "none";
+        }
+        return;
+      }
+
+      // 패치 노트를 이미 봤는지 확인
+      if (result.patchNotesSeen === true) {
+        const patchNotesEl = document.getElementById("patch-notes");
+        if (patchNotesEl) {
+          patchNotesEl.style.display = "none";
+        }
+        return; // 이미 봤으면 표시하지 않음
+      }
+
+      // 패치 노트 표시
+      const patchNotesEl = document.getElementById("patch-notes");
+      const patchMessageEl = document.getElementById("patch-message");
+      const patchCloseBtn = document.getElementById("patch-close-btn");
+
+      if (patchNotesEl && patchMessageEl && patchCloseBtn) {
+        patchMessageEl.innerHTML = patchMessage;
+        patchNotesEl.style.display = "block";
+
+        // 확인 버튼 클릭 이벤트
+        patchCloseBtn.addEventListener("click", async () => {
+          // GA4 패치 노트 확인 이벤트
+          try {
+            await chrome.runtime.sendMessage({
+              action: "GA4_EVENT",
+              eventName: "patch_notes_dismissed",
+              parameters: {
+                version: currentVersion,
+                patch_message_key: patchMessageKey,
+              },
+            });
+          } catch (error) {
+            console.warn("GA4 이벤트 전송 실패:", error);
+          }
+
+          patchNotesEl.style.display = "none";
+
+          // 패치 노트를 봤다고 표시
+          await chrome.storage.local.set({ patchNotesSeen: true });
+        });
+      }
+    } catch (error) {
+      console.warn("패치 노트 표시 실패:", error);
     }
   }
 
@@ -270,6 +347,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       return;
     }
+
     // 타이머 버튼 이벤트
     timerStartBtn.addEventListener("click", startTimer);
     timerPauseBtn.addEventListener("click", pauseTimer);
@@ -286,6 +364,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     stopwatchToggle.addEventListener("click", async () => {
       const isEnabled = !stopwatchToggle.classList.contains("active");
       stopwatchToggle.classList.toggle("active");
+
+      // GA4 스톱워치 토글 이벤트
+      try {
+        await chrome.runtime.sendMessage({
+          action: "GA4_EVENT",
+          eventName: "stopwatch_toggled",
+          parameters: { enabled: isEnabled },
+        });
+      } catch (error) {
+        console.warn("GA4 이벤트 전송 실패:", error);
+      }
 
       try {
         await chrome.storage.local.set({ isStopwatchEnabled: isEnabled });
@@ -411,8 +500,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // 상세보기 버튼
-    detailBtn.addEventListener("click", () => {
+    detailBtn.addEventListener("click", async () => {
       console.log("상세보기 버튼 클릭됨");
+
+      // GA4 상세보기 클릭 이벤트
+      try {
+        await chrome.runtime.sendMessage({
+          action: "GA4_EVENT",
+          eventName: "stats_page_opened",
+          parameters: {},
+        });
+      } catch (error) {
+        console.warn("GA4 이벤트 전송 실패:", error);
+      }
+
       try {
         // 새 탭에서 상세페이지 열기
         chrome.tabs.create({
@@ -437,7 +538,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       // 탭 트래커 상태 확인 및 경고 표시
       const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-      const isTrackerEnabled = result.isTabTrackerEnabled || false;
+      const isTrackerEnabled =
+        result.isTabTrackerEnabled !== undefined
+          ? result.isTabTrackerEnabled
+          : true;
 
       if (!isTrackerEnabled) {
         showTabTrackerWarning();
@@ -462,7 +566,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const result = await getSafeStorageData();
       const tabLogs = result.tabLogs || [];
-      const isTrackerEnabled = result.isTabTrackerEnabled || false;
+      const isTrackerEnabled =
+        result.isTabTrackerEnabled !== undefined
+          ? result.isTabTrackerEnabled
+          : true;
 
       // 오늘 데이터만 필터링
       const todayLogs = filterTodayData(tabLogs);
@@ -496,7 +603,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const result = await getSafeStorageData();
       const tabLogs = result.tabLogs || [];
-      const isTrackerEnabled = result.isTabTrackerEnabled || false;
+      const isTrackerEnabled =
+        result.isTabTrackerEnabled !== undefined
+          ? result.isTabTrackerEnabled
+          : true;
 
       // 오늘 데이터만 필터링
       const todayLogs = filterTodayData(tabLogs);
@@ -739,7 +849,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return result;
     } catch (error) {
       console.error("스토리지 데이터 읽기 실패:", error);
-      return { tabLogs: [], isTabTrackerEnabled: false, dailyStats: {} };
+      return { tabLogs: [], isTabTrackerEnabled: true, dailyStats: {} };
     }
   }
 

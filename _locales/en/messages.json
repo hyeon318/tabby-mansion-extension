@@ -99,6 +99,18 @@
     "message": "🇺🇸 New York (EST/EDT)",
     "description": "New York timezone option"
   },
+  "patchNotes": {
+    "message": "Patch Notes",
+    "description": "Patch notes title"
+  },
+  "gotIt": {
+    "message": "Got it",
+    "description": "Got it button text"
+  },
+  "patchMessageV102": {
+    "message": "We have resolved an issue where data was being deleted during extension updates.<br/>From now on, your data will remain safe and intact after updates.<br/>We sincerely apologize for any inconvenience caused.",
+    "description": "Patch message for version 1.0.7"
+  },
   "losAngeles": {
     "message": "🇺🇸 Los Angeles (PST/PDT)",
     "description": "Los Angeles timezone option"
@@ -303,10 +315,6 @@
   "deleteByDate": {
     "message": "Delete by Date",
     "description": "Delete by date section title"
-  },
-  "selectDateToDelete": {
-    "message": "Select date to delete",
-    "description": "Delete date input placeholder"
   },
   "deleteSelectedDateRecords": {
     "message": "Delete Selected Date Records",
@@ -532,5 +540,69 @@
   "popupTrackerOffDesc": {
     "message": "Please enable to start time tracking",
     "description": "Popup tracker off description"
+  },
+  "filterApplyError": {
+    "message": "An error occurred while applying filters.",
+    "description": "Error message when applying filters fails"
+  },
+  "dataRefreshError": {
+    "message": "An error occurred while refreshing data.",
+    "description": "Error message when refreshing data fails"
+  },
+  "selectDateToDelete": {
+    "message": "Please select a date to delete.",
+    "description": "Message to select date for deletion"
+  },
+  "confirmDeleteDate": {
+    "message": "Are you sure you want to delete all records for the selected date ({date})?\n\nThis action cannot be undone.",
+    "description": "Confirmation message for deleting records by date"
+  },
+  "dateRecordsDeleted": {
+    "message": "Records for {date} have been successfully deleted.",
+    "description": "Success message when date records are deleted"
+  },
+  "deleteRecordsError": {
+    "message": "An error occurred while deleting records.",
+    "description": "Error message when deleting records fails"
+  },
+  "confirmDeleteAll": {
+    "message": "Are you sure you want to delete all tab activity records?\n\nThis action cannot be undone and all data will be permanently deleted.",
+    "description": "Confirmation message for deleting all records"
+  },
+  "allRecordsDeleted": {
+    "message": "All records have been successfully deleted.",
+    "description": "Success message when all records are deleted"
+  },
+  "languageChangeError": {
+    "message": "An error occurred while changing language.",
+    "description": "Error message when changing language fails"
+  },
+  "languageChangedMessage": {
+    "message": "Language has been changed to {language}. The page will refresh.",
+    "description": "Message when language is changed successfully"
+  },
+  "timezoneLibraryError": {
+    "message": "Timezone processing library is not loaded. Please refresh the page.",
+    "description": "Error message when timezone library is not loaded"
+  },
+  "tabTrackerDisabled": {
+    "message": "Tab Tracker Disabled",
+    "description": "Tab tracker disabled warning title"
+  },
+  "tabTrackerDisabledDesc": {
+    "message": "Please enable tab tracker for accurate time measurement.",
+    "description": "Tab tracker disabled warning description"
+  },
+  "dateRecordsDeleteError": {
+    "message": "Date records deletion failed",
+    "description": "Console error message for date records deletion failure"
+  },
+  "allRecordsDeleteError": {
+    "message": "All records deletion failed",
+    "description": "Console error message for all records deletion failure"
+  },
+  "languageSettingsLoadError": {
+    "message": "Language settings load failed",
+    "description": "Console error message for language settings load failure"
   }
 }

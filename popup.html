@@ -32,6 +32,19 @@
       ></div>
     </div>
 
+    <!-- 패치 노트 섹션 -->
+    <div id="patch-notes" class="patch-notes" style="display: none">
+      <div class="patch-content">
+        <div class="patch-title">
+          🆕 <span data-i18n="patchNotes">패치 노트</span>
+        </div>
+        <div class="patch-message" id="patch-message"></div>
+        <button class="patch-close-btn" id="patch-close-btn" data-i18n="gotIt">
+          확인
+        </button>
+      </div>
+    </div>
+
     <!-- 타이머 섹션 -->
     <div class="timer-section">
       <div class="timer-header">
@@ -46,28 +59,11 @@
       </div>
 
       <div class="timer-controls">
-        <button
-          class="timer-btn start-btn"
-          id="timer-start-btn"
-          data-i18n="start"
-        >
-          시작
+        <button class="timer-btn start-btn" id="timer-start-btn">Start</button>
+        <button class="timer-btn pause-btn" id="timer-pause-btn" disabled>
+          Stop
         </button>
-        <button
-          class="timer-btn pause-btn"
-          id="timer-pause-btn"
-          disabled
-          data-i18n="pause"
-        >
-          일시정지
-        </button>
-        <button
-          class="timer-btn reset-btn"
-          id="timer-reset-btn"
-          data-i18n="reset"
-        >
-          리셋
-        </button>
+        <button class="timer-btn reset-btn" id="timer-reset-btn">Reset</button>
       </div>
 
       <div class="timer-label-input">
