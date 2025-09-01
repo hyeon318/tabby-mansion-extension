@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "TabbyMansion",
+    "message": "TabTabby Mansion - Timer & TrackerbyMansion",
     "description": "Extension name"
   },
   "extShortName": {
@@ -109,7 +109,11 @@
   },
   "patchMessageV102": {
     "message": "We have resolved an issue where data was being deleted during extension updates.<br/>From now on, your data will remain safe and intact after updates.<br/>We sincerely apologize for any inconvenience caused.",
-    "description": "Patch message for version 1.0.7"
+    "description": "Patch message for version 1.0.2"
+  },
+  "patchMessageV103": {
+    "message": "We have resolved an issue where data was being deleted during extension updates.<br/>From now on, your data will remain safe and intact after updates.<br/>We sincerely apologize for any inconvenience caused.",
+    "description": "Patch message for version 1.0.3"
   },
   "losAngeles": {
     "message": "🇺🇸 Los Angeles (PST/PDT)",

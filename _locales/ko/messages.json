@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "TabbyMansion",
+    "message": "Tabby Mansion - Timer & Tracker",
     "description": "Extension name"
   },
   "extShortName": {
@@ -109,7 +109,11 @@
   },
   "patchMessageV102": {
     "message": "확장 프로그램 업데이트 시 데이터가 삭제되던 문제가 해결되었습니다.<br/>앞으로는 업데이트 후에도 데이터가 안전하게 유지됩니다.<br/>이용에 불편을 드린 점 진심으로 사과드립니다.",
-    "description": "Patch message for version 1.0.7"
+    "description": "Patch message for version 1.0.2"
+  },
+  "patchMessageV103": {
+    "message": "확장 프로그램 업데이트 시 데이터가 삭제되던 문제가 해결되었습니다.<br/>앞으로는 업데이트 후에도 데이터가 안전하게 유지됩니다.<br/>이용에 불편을 드린 점 진심으로 사과드립니다.",
+    "description": "Patch message for version 1.0.3"
   },
   "losAngeles": {
     "message": "🇺🇸 로스앤젤레스 (PST/PDT)",

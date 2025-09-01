@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "TabbyMansion",
+    "message": "Tabby Mansion - Timer & Tracker",
     "description": "Extension name"
   },
   "extShortName": {
@@ -109,7 +109,11 @@
   },
   "patchMessageV102": {
     "message": "拡張機能のアップデート時にデータが削除される不具合を修正しました。<br/>今後はアップデート後もデータが安全に保持されます。 <br/>ご不便をおかけしましたことを心よりお詫び申し上げます。",
-    "description": "Patch message for version 1.0.7"
+    "description": "Patch message for version 1.0.2"
+  },
+  "patchMessageV103": {
+    "message": "拡張機能のアップデート時にデータが削除される不具合を修正しました。<br/>今後はアップデート後もデータが安全に保持されます。 <br/>ご不便をおかけしましたことを心よりお詫び申し上げます。",
+    "description": "Patch message for version 1.0.3"
   },
   "losAngeles": {
     "message": "🇺🇸 ロサンゼルス (PST/PDT)",
