@@ -126,7 +126,7 @@ export function fmtDateRange(startDate, endDate, tz, lang, withToday = false) {
   }
 }
 
-// 시간별 리스트용 날짜 포맷
+// ?�간�?리스?�용 ?�짜 ?�맷
 export function fmtTimeListDate(date, view, tz, lang) {
   if (!date || isNaN(date.getTime())) return "Invalid Date";
 
@@ -136,7 +136,7 @@ export function fmtTimeListDate(date, view, tz, lang) {
   switch (view) {
     case "hourly":
       formatKey = "timeListHourlyFormat";
-      formatStr = safeGetMessage(formatKey) || "yyyy년 MM월 dd일 HH:mm";
+      formatStr = safeGetMessage(formatKey) || "yyyy??MM??dd??HH:mm";
       break;
     case "weekly":
       formatKey = "timeListWeeklyFormat";

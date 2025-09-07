@@ -1,6 +1,7 @@
 // TabbyMansion Content Script - 공유 타이머 오버레이
 // Debug 유틸리티 import
 import { debug } from "./debug.js";
+import { formatTimerTime } from "./utils/string-util.js";
 let stopwatchElement = null;
 let timerDisplayInterval = null;
 
@@ -219,18 +220,6 @@ function updateTimerDisplay() {
       timerLabelElement.style.display = "none";
     }
   }
-}
-
-// 타이머 시간 형식화 (HH:MM:SS)
-function formatTimerTime(milliseconds) {
-  const totalSeconds = Math.floor(milliseconds / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${hours.toString().padStart(2, "0")}:${minutes
-    .toString()
-    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // 타이머 컨트롤 버튼 상태 업데이트

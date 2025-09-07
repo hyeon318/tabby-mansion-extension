@@ -32,9 +32,9 @@ chrome.storage.local.get(null, result => {
         console.log("📋 최근 5개 로그:");
         allLogs.slice(-5).forEach((log, index) => {
           console.log(
-            `  ${index + 1}. ${log.domain} - ${log.title.substring(0, 30)} (${
-              log.timestamp
-            })`
+            `  ${index + 1}. ${log.domain} - ${
+              log.title ? log.title.substring(0, 30) : "제목 없음"
+            } (${log.timestamp})`
           );
         });
 

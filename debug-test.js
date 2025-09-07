@@ -37,9 +37,9 @@ chrome.storage.local.get(null, async result => {
       console.log("\n📋 최근 3개 로그:");
       allLogs.slice(-3).forEach((log, index) => {
         console.log(
-          `  ${index + 1}. ${log.domain} - ${log.title.substring(0, 30)} (${
-            log.timestamp
-          })`
+          `  ${index + 1}. ${log.domain} - ${
+            log.title ? log.title.substring(0, 30) : "제목 없음"
+          } (${log.timestamp})`
         );
       });
     }

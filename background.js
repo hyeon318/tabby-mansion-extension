@@ -1,5 +1,8 @@
 // TabbyMansion Background Service Worker
 
+// 유틸리티 import
+import { extractDomain, safeTruncateTitle } from "./utils/string-util.js";
+
 // =========================================================================
 // 환경별 로깅 설정
 // =========================================================================
@@ -1071,7 +1074,7 @@ async function logTabActivity(tab, startTime = null) {
       todayLogsCount: tabLogs[dayKey].length,
       logEntry: {
         domain: logEntry.domain,
-        title: logEntry.title.substring(0, 30),
+        title: safeTruncateTitle(logEntry.title, 30),
         timestamp: logEntry.timestamp,
         tabId: logEntry.tabId,
       },
@@ -1143,16 +1146,6 @@ async function logTabActivity(tab, startTime = null) {
       stack: error.stack,
       tab: tab ? { id: tab.id, url: tab.url, title: tab.title } : null,
     });
-  }
-}
-
-// 도메인 추출 함수
-function extractDomain(url) {
-  try {
-    const hostname = new URL(url).hostname;
-    return hostname.replace("www.", "");
-  } catch {
-    return "알 수 없음";
   }
 }
 

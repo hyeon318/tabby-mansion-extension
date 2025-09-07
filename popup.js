@@ -18,6 +18,13 @@ import { debug } from "./debug.js";
 // 새로운 유틸리티 import
 import { appState, applyI18n } from "./utils/state.js";
 import { fmtDurationHM, fmtDurationSec } from "./utils/datetime.js";
+import {
+  escapeHtml,
+  truncateUrl,
+  extractDomain,
+  formatTimerTime,
+  safeTruncateTitle,
+} from "./utils/string-util.js";
 
 // 필요한 Chart.js 컴포넌트만 등록
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
@@ -232,18 +239,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       timerLabel.style.display = "none";
     }
-  }
-
-  // 타이머 시간 형식화 (HH:MM:SS)
-  function formatTimerTime(milliseconds) {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   }
 
   // 타이머 컨트롤 버튼 상태 업데이트
@@ -603,10 +598,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const result = await getSafeStorageData();
       const tabLogs = result.tabLogs || [];
-      const isTrackerEnabled =
-        result.isTabTrackerEnabled !== undefined
-          ? result.isTabTrackerEnabled
-          : true;
 
       // 오늘 데이터만 필터링
       const todayLogs = filterTodayData(tabLogs);
@@ -622,15 +613,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       const recentLogs = todayLogs.slice(-20).reverse();
 
       logsContainer.innerHTML = recentLogs
-        .map(
-          log => `
+        .map(log => {
+          // 안전하게 title 처리
+          const title = safeTruncateTitle(log.title, 30);
+          const url = truncateUrl(log.url || "", 47);
+          // timestamp를 timeFormatted로 변환
+          const timeFormatted = format(
+            new Date(log.timestamp),
+            "yyyy/MM/dd HH:mm:ss",
+            {
+              locale: ko,
+            }
+          );
+
+          return `
         <div class="log-item">
-          <div class="log-time">${log.timeFormatted}</div>
-          <div class="log-title">${escapeHtml(log.title)}</div>
-          <div class="log-url">${escapeHtml(truncateUrl(log.url))}</div>
+          <div class="log-title">${escapeHtml(title)}</div>
+          <div class="log-time">${timeFormatted}</div>
+          <div class="log-url">${escapeHtml(url)}</div>
         </div>
-      `
-        )
+      `;
+        })
         .join("");
 
       // 스크롤을 맨 위로
@@ -640,13 +643,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       logsContainer.innerHTML =
         '<div class="no-logs">로그 표시 중 오류가 발생했습니다</div>';
     }
-  }
-
-  // HTML 이스케이프
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   // 탭 트래커 경고 표시
@@ -706,12 +702,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // URL 길이 제한
-  function truncateUrl(url) {
-    if (url.length <= 50) return url;
-    return url.substring(0, 47) + "...";
-  }
-
   // 오늘 데이터만 필터링
   function filterTodayData(tabLogs) {
     const today = new Date();
@@ -741,7 +731,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!siteData[domain]) {
         siteData[domain] = {
           domain,
-          title: log.title.substring(0, 30),
+          title: safeTruncateTitle(log.title, 30),
           timeSpent: 0,
           visits: 0,
         };
@@ -775,16 +765,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Object.values(siteData)
       .sort((a, b) => b.timeSpent - a.timeSpent)
       .slice(0, 10);
-  }
-
-  // 도메인 추출
-  function extractDomain(url) {
-    try {
-      const hostname = new URL(url).hostname;
-      return hostname.replace("www.", "");
-    } catch {
-      return "알 수 없음";
-    }
   }
 
   // 차트 그리기
