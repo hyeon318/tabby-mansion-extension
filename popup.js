@@ -727,7 +727,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 사이트별 사용 시간 계산
   async function calculateSiteUsage(tabLogs) {
     const siteData = {};
-    const averageTabTime = 30000; // 기본 30초 추정
+    const averageTabTime = 5000; // 기본 5초 추정 (과대계산 방지)
 
     // 탭 트래커 상태 확인
     const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
@@ -763,17 +763,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           timeSpent = averageTabTime;
         }
       } else {
-        // 마지막 로그인 경우, 탭 트래커 상태에 따라 처리
-        if (isTrackerEnabled) {
-          // 활성화된 경우: 현재까지의 시간 계산 (단, 최대 3시간)
-          const now = Date.now();
-          const logTime = new Date(log.timestamp).getTime();
-          const timeDiff = now - logTime;
-          timeSpent = Math.min(timeDiff, 10800000); // 최대 3시간
-        } else {
-          // 비활성화된 경우: 기본값 사용 (시간 증가 방지)
-          timeSpent = averageTabTime;
-        }
+        // 마지막 로그인 경우, 기본값 사용 (실시간 계산 제거)
+        timeSpent = averageTabTime;
       }
 
       siteData[domain].timeSpent += timeSpent;
@@ -817,39 +808,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // 안전한 스토리지 데이터 읽기 (titles 타입 정규화 포함)
+  // 안전한 스토리지 데이터 읽기 (날짜별 로그 포함)
   async function getSafeStorageData() {
     try {
-      const result = await chrome.storage.local.get([
-        "tabLogs",
+      // 새로운 구조의 tabLogs 로드
+      const tabLogsResult = await chrome.storage.local.get(["tabLogs"]);
+      const tabLogs = tabLogsResult.tabLogs || {};
+
+      // 모든 날짜별 tabLogs를 합치기
+      let allTabLogs = [];
+      Object.values(tabLogs).forEach(dailyLogs => {
+        allTabLogs.push(...dailyLogs);
+      });
+
+      // 시간순 정렬
+      allTabLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      const trackerResult = await chrome.storage.local.get([
         "isTabTrackerEnabled",
-        "dailyStats",
       ]);
 
-      // dailyStats에서 titles 타입 정규화
-      if (result.dailyStats) {
-        Object.keys(result.dailyStats).forEach(dayKey => {
-          Object.keys(result.dailyStats[dayKey]).forEach(domain => {
-            const bucket = result.dailyStats[dayKey][domain];
-
-            if (bucket.titles && !Array.isArray(bucket.titles)) {
-              // 메모리에서 Set으로 변환하지만 스토리지는 건드리지 않음
-              if (bucket.titles instanceof Set) {
-                bucket.titles = Array.from(bucket.titles);
-              } else if (typeof bucket.titles === "string") {
-                bucket.titles = [bucket.titles];
-              } else {
-                bucket.titles = [];
-              }
-            }
-          });
-        });
-      }
-
-      return result;
+      return {
+        tabLogs: allTabLogs,
+        isTabTrackerEnabled:
+          trackerResult.isTabTrackerEnabled !== undefined
+            ? trackerResult.isTabTrackerEnabled
+            : true,
+      };
     } catch (error) {
       console.error("스토리지 데이터 읽기 실패:", error);
-      return { tabLogs: [], isTabTrackerEnabled: true, dailyStats: {} };
+      return { tabLogs: [], isTabTrackerEnabled: true };
     }
   }
 

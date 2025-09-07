@@ -1,5 +1,266 @@
 // TabbyMansion Background Service Worker
 
+// =========================================================================
+// 환경별 로깅 설정
+// =========================================================================
+
+// 환경 감지 (webpack DefinePlugin으로 주입됨)
+const isDevelopment = process.env.NODE_ENV === "development";
+const isTest = process.env.NODE_ENV === "test";
+const isProduction = process.env.NODE_ENV === "production";
+
+// 로깅 설정
+const LOG_CONFIG = {
+  enabled: true, // 모든 환경에서 로그 활성화 (디버깅을 위해)
+  prefix: "[TabbyMansion]",
+  level: isTest ? "debug" : isDevelopment ? "debug" : "info", // 환경별 로그 레벨
+};
+
+// 로깅 함수
+function log(level, message, data = null) {
+  if (!LOG_CONFIG.enabled) return;
+
+  const timestamp = new Date().toISOString();
+  const prefix = `${LOG_CONFIG.prefix} [${timestamp}]`;
+
+  switch (level) {
+    case "error":
+      console.error(`${prefix} ❌ ${message}`, data);
+      break;
+    case "warn":
+      console.warn(`${prefix} ⚠️ ${message}`, data);
+      break;
+    case "info":
+      console.log(`${prefix} ℹ️ ${message}`, data);
+      break;
+    case "debug":
+      if (LOG_CONFIG.level === "debug") {
+        console.log(`${prefix} 🔍 ${message}`, data);
+      }
+      break;
+    case "success":
+      console.log(`${prefix} ✅ ${message}`, data);
+      break;
+  }
+}
+
+// 환경 정보 로깅
+log("info", `환경: ${process.env.NODE_ENV || "development"}`, {
+  isDevelopment,
+  isTest,
+  isProduction,
+  loggingEnabled: LOG_CONFIG.enabled,
+});
+
+// =========================================================================
+// 공통 유틸리티 함수들
+// =========================================================================
+
+// 탭 트래커 활성화 상태 확인
+async function isTabTrackerEnabled() {
+  try {
+    const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
+    return result.isTabTrackerEnabled !== undefined
+      ? result.isTabTrackerEnabled
+      : true;
+  } catch (error) {
+    console.error("탭 트래커 상태 확인 실패:", error);
+    return false;
+  }
+}
+
+// 날짜 키 생성 (YYYY-MM-DD 형식) - 로컬 시간대 기준
+function generateDateKey(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date);
+  // 로컬 시간대 기준으로 날짜 생성 (UTC 시간과 다를 수 있음)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// tabLogs 객체 구조로 안전하게 로드
+async function loadTabLogs() {
+  try {
+    const result = await chrome.storage.local.get(["tabLogs"]);
+    log("debug", "tabLogs 로드 성공", {
+      hasData: !!result.tabLogs,
+      type: typeof result.tabLogs,
+      keys: result.tabLogs ? Object.keys(result.tabLogs) : [],
+    });
+    return result.tabLogs || {};
+  } catch (error) {
+    log("error", "tabLogs 로드 실패", error);
+    return {};
+  }
+}
+
+// tabLogs 저장
+async function saveTabLogs(tabLogs) {
+  try {
+    // 저장 전 데이터 유효성 검사
+    if (!tabLogs || typeof tabLogs !== "object") {
+      log("error", "저장할 tabLogs 데이터가 유효하지 않음", {
+        tabLogs,
+        type: typeof tabLogs,
+      });
+      return false;
+    }
+
+    // Chrome storage quota 확인 (대략적인 크기 체크)
+    const dataSize = JSON.stringify(tabLogs).length;
+    if (dataSize > 5 * 1024 * 1024) {
+      // 5MB 제한
+      log("warn", "tabLogs 데이터가 너무 큽니다", { sizeBytes: dataSize });
+      // 오래된 데이터 정리
+      cleanupOldLogs(tabLogs);
+    }
+
+    await chrome.storage.local.set({ tabLogs });
+    log("debug", "tabLogs 저장 성공", {
+      dateCount: Object.keys(tabLogs).length,
+      totalLogs: Object.values(tabLogs).reduce(
+        (sum, logs) => sum + logs.length,
+        0
+      ),
+      dataSize,
+    });
+    return true;
+  } catch (error) {
+    log("error", "tabLogs 저장 실패", error);
+
+    // Chrome storage 에러 종류별 처리
+    if (error.message && error.message.includes("QUOTA_BYTES")) {
+      log("error", "Storage quota 초과 - 데이터 정리 필요");
+      // 30일 이상 된 데이터만 보관하도록 정리
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      Object.keys(tabLogs).forEach(dateKey => {
+        const keyDate = new Date(dateKey);
+        if (keyDate < thirtyDaysAgo) {
+          delete tabLogs[dateKey];
+        }
+      });
+
+      // 정리 후 재시도
+      try {
+        await chrome.storage.local.set({ tabLogs });
+        log("success", "데이터 정리 후 저장 성공");
+        return true;
+      } catch (retryError) {
+        log("error", "데이터 정리 후에도 저장 실패", retryError);
+        return false;
+      }
+    }
+
+    return false;
+  }
+}
+
+// 시간 계산 및 제한
+function calculateActualTime(startTime) {
+  const startTimeMs =
+    typeof startTime === "number" ? startTime : new Date(startTime).getTime();
+
+  const actualTime = Date.now() - startTimeMs;
+  const maxReasonableTime = 24 * 60 * 60 * 1000; // 24시간 제한
+
+  return actualTime > maxReasonableTime ? maxReasonableTime : actualTime;
+}
+
+// 특정 탭의 미완료 로그 찾기 및 완료 처리
+async function findAndCompleteTabLog(tabId, startTime) {
+  log("debug", "findAndCompleteTabLog 시작", {
+    tabId,
+    startTime: startTime ? new Date(startTime).toLocaleString() : null,
+  });
+
+  const tabLogs = await loadTabLogs();
+  let foundLog = false;
+  let completedLogInfo = null;
+
+  // 모든 날짜별 로그에서 해당 탭의 미완료 로그 찾기
+  for (const [dateKey, dailyLogs] of Object.entries(tabLogs)) {
+    for (let i = dailyLogs.length - 1; i >= 0; i--) {
+      const logEntry = dailyLogs[i]; // 변수명을 logEntry로 변경하여 충돌 방지
+
+      if (logEntry.tabId === tabId && !logEntry.actualTime) {
+        const finalActualTime = calculateActualTime(
+          startTime || logEntry.startTime
+        );
+
+        // 로그 완료 처리
+        logEntry.actualTime = finalActualTime;
+        logEntry.endTime = new Date().toISOString();
+
+        // 완료된 로그 정보 저장
+        completedLogInfo = {
+          dateKey,
+          domain: logEntry.domain,
+          title: logEntry.title,
+          startTime: logEntry.startTime,
+          endTime: logEntry.endTime,
+          actualTimeSeconds: Math.round(finalActualTime / 1000),
+          url: logEntry.url,
+        };
+
+        // 일자별 통계에 실제 시간 추가
+        await updateDailyTime(
+          logEntry.domain,
+          logEntry.timestamp,
+          finalActualTime
+        );
+
+        log(
+          "success",
+          `탭 ${tabId} 실제 사용 시간 기록 완료`,
+          completedLogInfo
+        );
+
+        foundLog = true;
+        break;
+      }
+    }
+    if (foundLog) break;
+  }
+
+  if (!foundLog) {
+    log("warn", "완료할 로그를 찾지 못함", {
+      tabId,
+      searchedDates: Object.keys(tabLogs),
+      totalLogsSearched: Object.values(tabLogs).reduce(
+        (sum, logs) => sum + logs.length,
+        0
+      ),
+    });
+  }
+
+  // 수정된 tabLogs 저장
+  if (foundLog) {
+    const saveSuccess = await saveTabLogs(tabLogs);
+    if (saveSuccess) {
+      log("success", "로그 완료 후 저장 성공", completedLogInfo);
+    } else {
+      log("error", "로그 완료 후 저장 실패", completedLogInfo);
+    }
+  }
+
+  return foundLog;
+}
+
+// 90일 이상 된 로그 정리
+function cleanupOldLogs(tabLogs) {
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+  Object.keys(tabLogs).forEach(dateKey => {
+    const keyDate = new Date(dateKey);
+    if (keyDate < ninetyDaysAgo) {
+      delete tabLogs[dateKey];
+    }
+  });
+
+  return tabLogs;
+}
+
 // Google Analytics 4 설정
 const GA4_MEASUREMENT_ID = "G-6EYP9W3WCZ";
 const GA4_API_SECRET = "R2rqtts1QzGbj2De-epG0w";
@@ -35,14 +296,14 @@ async function sendGA4Event(eventName, parameters = {}) {
     );
 
     if (response.ok) {
-      if (typeof debug !== "undefined") {
-        debug.analytics(`GA4 이벤트 전송 성공: ${eventName}`, parameters);
+      if (LOG_CONFIG.enabled) {
+        log("debug", `GA4 이벤트 전송 성공: ${eventName}`, parameters);
       }
     } else {
-      console.warn(`GA4 이벤트 전송 실패: ${eventName}`, response.status);
+      log("warn", `GA4 이벤트 전송 실패: ${eventName}`, response.status);
     }
   } catch (error) {
-    console.warn(`GA4 이벤트 전송 오류: ${eventName}`, error);
+    log("warn", `GA4 이벤트 전송 오류: ${eventName}`, error);
   }
 }
 
@@ -67,12 +328,12 @@ async function getOrCreateClientId() {
     await chrome.storage.local.set({ ga4_client_id: clientId });
     return clientId;
   } catch (error) {
-    console.warn("클라이언트 ID 생성 실패:", error);
+    log("warn", "클라이언트 ID 생성 실패:", error);
     return "anonymous";
   }
 }
 
-let isTabTrackerEnabled = true;
+let isTabTrackerEnabledLocal = true;
 let currentTabId = null;
 let tabStartTime = null; // 탭 시작 시간 추적
 
@@ -87,11 +348,10 @@ let timerState = {
 
 // 확장 프로그램 설치 시 초기 설정
 chrome.runtime.onInstalled.addListener(async details => {
-  if (typeof debug !== "undefined")
-    debug.serviceWorker(
-      "TabbyMansion 확장 프로그램이 설치되었습니다. 이유:",
-      details.reason
-    );
+  log("info", "TabbyMansion 확장 프로그램 설치/업데이트됨", {
+    reason: details.reason,
+    version: chrome.runtime.getManifest().version,
+  });
 
   // GA4 설치 이벤트 전송
   await sendGA4Event("extension_installed", {
@@ -107,15 +367,23 @@ chrome.runtime.onInstalled.addListener(async details => {
     "timerState",
   ]);
 
+  log("debug", "기존 데이터 확인", {
+    hasStopwatch: existingData.isStopwatchEnabled !== undefined,
+    hasTabTracker: existingData.isTabTrackerEnabled !== undefined,
+    hasTabLogs: !!existingData.tabLogs,
+    hasTimerState: !!existingData.timerState,
+    tabLogsType: typeof existingData.tabLogs,
+    tabLogsKeys: existingData.tabLogs ? Object.keys(existingData.tabLogs) : [],
+  });
+
   // 새로 설치하는 경우에만 초기화 (업데이트나 재활성화 시에는 기존 데이터 보존)
   if (details.reason === "install") {
-    if (typeof debug !== "undefined")
-      debug.serviceWorker("새로 설치됨 - 기본 설정으로 초기화");
+    log("info", "새로 설치됨 - 기본 설정으로 초기화");
 
     await chrome.storage.local.set({
       isStopwatchEnabled: false,
       isTabTrackerEnabled: true,
-      tabLogs: [],
+      tabLogs: {},
       timerState: {
         status: "paused",
         startedAt: null,
@@ -125,6 +393,13 @@ chrome.runtime.onInstalled.addListener(async details => {
       },
     });
 
+    log("success", "초기 설정 완료", {
+      stopwatch: false,
+      tabTracker: true,
+      tabLogs: "객체로 초기화",
+      timerState: "일시정지 상태로 초기화",
+    });
+
     // GA4 초기 설정 이벤트
     await sendGA4Event("extension_initialized", {
       tab_tracker_enabled: true,
@@ -132,8 +407,7 @@ chrome.runtime.onInstalled.addListener(async details => {
     });
   } else {
     // 업데이트나 재활성화 시에는 누락된 필드만 기본값으로 추가
-    if (typeof debug !== "undefined")
-      debug.serviceWorker("업데이트/재활성화됨 - 기존 설정 보존");
+    log("info", "업데이트/재활성화됨 - 기존 설정 보존 및 누락된 설정 추가");
 
     const updates = {};
 
@@ -144,8 +418,31 @@ chrome.runtime.onInstalled.addListener(async details => {
       updates.isTabTrackerEnabled = true;
     }
     if (!existingData.tabLogs) {
-      updates.tabLogs = [];
+      updates.tabLogs = {};
     }
+    // 기존 배열 구조를 객체 구조로 마이그레이션
+    else if (Array.isArray(existingData.tabLogs)) {
+      log("info", "tabLogs 배열 구조 감지 - 객체 구조로 마이그레이션");
+      const newTabLogs = {};
+      existingData.tabLogs.forEach(logEntry => {
+        const date = new Date(logEntry.timestamp);
+        const dayKey = generateDateKey(date);
+        if (!newTabLogs[dayKey]) {
+          newTabLogs[dayKey] = [];
+        }
+        newTabLogs[dayKey].push(logEntry);
+      });
+      updates.tabLogs = newTabLogs;
+      log("success", "tabLogs 마이그레이션 완료", {
+        originalCount: existingData.tabLogs.length,
+        newDaysCount: Object.keys(newTabLogs).length,
+        newTotalCount: Object.values(newTabLogs).reduce(
+          (sum, logs) => sum + logs.length,
+          0
+        ),
+      });
+    }
+
     if (!existingData.timerState) {
       updates.timerState = {
         status: "paused",
@@ -158,8 +455,9 @@ chrome.runtime.onInstalled.addListener(async details => {
 
     if (Object.keys(updates).length > 0) {
       await chrome.storage.local.set(updates);
-      if (typeof debug !== "undefined")
-        debug.serviceWorker("누락된 설정 추가:", updates);
+      log("info", "누락된 설정 추가 완료", updates);
+    } else {
+      log("info", "모든 설정이 이미 존재함");
     }
 
     // GA4 업데이트 이벤트
@@ -172,36 +470,48 @@ chrome.runtime.onInstalled.addListener(async details => {
     await chrome.storage.local.set({ patchNotesSeen: false });
   }
 
-  // 기존 데이터 마이그레이션 수행
-  await migrateLegacyStats();
-
   // 저장된 상태 로드
   await loadTimerState();
   await loadTabTrackerState();
+
+  // 사용하지 않는 중복 데이터 정리 (성능 향상)
+  await cleanupDuplicateData();
+
+  log("success", "✅ Service Worker 초기화 완료");
 });
 
 // Service Worker 시작 시 상태 복원
 chrome.runtime.onStartup.addListener(async () => {
-  if (typeof debug !== "undefined")
-    debug.serviceWorker("TabbyMansion Service Worker 시작됨");
+  if (LOG_CONFIG.enabled) log("info", "TabbyMansion Service Worker 시작됨");
   await loadTimerState();
   await loadTabTrackerState();
+  await initializeTabTracking(); // 탭 추적 초기화 추가
 });
 
 // Service Worker 활성화 시 상태 복원
 self.addEventListener("activate", async event => {
-  if (typeof debug !== "undefined")
-    debug.serviceWorker("TabbyMansion Service Worker 활성화됨");
+  if (LOG_CONFIG.enabled) log("info", "TabbyMansion Service Worker 활성화됨");
   await loadTimerState();
   await loadTabTrackerState();
+  await initializeTabTracking(); // 탭 추적 초기화 추가
 });
 
 // Service Worker 종료 전 타이머 상태 저장
 self.addEventListener("beforeunload", async event => {
-  if (typeof debug !== "undefined")
-    debug.serviceWorker("TabbyMansion Service Worker 종료 예정 - 상태 저장");
+  log("info", "TabbyMansion Service Worker 종료 예정 - 상태 저장");
+
+  // 타이머 상태 저장
   if (timerState.status === "running") {
     await saveTimerState();
+  }
+
+  // 현재 추적 중인 탭 완료 처리
+  if (currentTabId && tabStartTime) {
+    log("info", "Service Worker 종료 전 현재 탭 완료 처리", {
+      tabId: currentTabId,
+      startTime: new Date(tabStartTime).toLocaleString(),
+    });
+    await findAndCompleteTabLog(currentTabId, tabStartTime);
   }
 });
 
@@ -218,15 +528,15 @@ async function loadTimerState() {
         typeof savedState.accumulatedMs !== "number" ||
         (savedState.startedAt && typeof savedState.startedAt !== "number")
       ) {
-        if (typeof debug !== "undefined")
-          debug.warn("저장된 타이머 상태가 유효하지 않습니다. 초기화합니다.");
+        if (LOG_CONFIG.enabled)
+          log("warn", "저장된 타이머 상태가 유효하지 않습니다. 초기화합니다.");
         resetTimer();
         return;
       }
 
       timerState = { ...timerState, ...savedState };
-      if (typeof debug !== "undefined")
-        debug.timer("TabbyMansion 타이머 상태 로드됨:", {
+      if (LOG_CONFIG.enabled)
+        log("debug", "TabbyMansion 타이머 상태 로드됨:", {
           status: timerState.status,
           accumulatedMs: timerState.accumulatedMs,
           label: timerState.label,
@@ -243,8 +553,9 @@ async function loadTimerState() {
         // Service Worker 재시작으로 인한 시간 차이가 비정상적으로 큰 경우만 처리
         // (7일 이상은 확실히 비정상적인 경우)
         if (timeSinceStart > 7 * 24 * 60 * 60 * 1000) {
-          if (typeof debug !== "undefined")
-            debug.timer(
+          if (LOG_CONFIG.enabled)
+            log(
+              "debug",
               "타이머가 7일 이상 실행되어 리셋합니다 (비정상적인 상태)"
             );
           resetTimer();
@@ -253,8 +564,8 @@ async function loadTimerState() {
           timerState.startedAt = now;
           saveTimerState();
           broadcastTimerState();
-          if (typeof debug !== "undefined")
-            debug.timer("실행 중이던 타이머 복원됨:", {
+          if (LOG_CONFIG.enabled)
+            log("debug", "실행 중이던 타이머 복원됨:", {
               status: timerState.status,
               accumulatedMs: timerState.accumulatedMs,
               label: timerState.label,
@@ -263,7 +574,7 @@ async function loadTimerState() {
       }
     }
   } catch (error) {
-    console.error("❌ 타이머 상태 로드 실패:", error);
+    log("error", "❌ 타이머 상태 로드 실패:", error);
   }
 }
 
@@ -274,53 +585,94 @@ async function saveTimerState() {
     timerState.lastSaveTime = Date.now();
 
     await chrome.storage.local.set({ timerState });
-    if (typeof debug !== "undefined")
-      debug.storage("타이머 상태 저장됨:", {
+    if (LOG_CONFIG.enabled)
+      log("debug", "타이머 상태 저장됨:", {
         status: timerState.status,
         accumulatedMs: timerState.accumulatedMs,
         label: timerState.label,
         lastSaveTime: new Date(timerState.lastSaveTime).toLocaleString(),
       });
   } catch (error) {
-    console.error("❌ 타이머 상태 저장 실패:", error);
+    log("error", "❌ 타이머 상태 저장 실패:", error);
+  }
+}
+
+// 탭 추적 초기화 함수 추가
+async function initializeTabTracking() {
+  try {
+    const isEnabled = await isTabTrackerEnabled();
+    if (!isEnabled) {
+      log("debug", "탭 트래커가 비활성화되어 있어 초기화하지 않음");
+      return;
+    }
+
+    // 현재 활성 윈도우의 활성 탭 찾기
+    const windows = await chrome.windows.getAll({ populate: true });
+    let activeTab = null;
+
+    for (const window of windows) {
+      if (window.focused) {
+        activeTab = window.tabs.find(tab => tab.active);
+        break;
+      }
+    }
+
+    // 포커스된 윈도우가 없다면 가장 최근에 사용된 윈도우의 활성 탭 사용
+    if (!activeTab && windows.length > 0) {
+      const lastWindow = windows.sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+      activeTab = lastWindow.tabs.find(tab => tab.active);
+    }
+
+    if (activeTab) {
+      // 유효한 URL인지 확인
+      if (
+        activeTab.url &&
+        !activeTab.url.startsWith("chrome://") &&
+        !activeTab.url.startsWith("chrome-extension://") &&
+        !activeTab.url.startsWith("edge://") &&
+        !activeTab.url.startsWith("about:")
+      ) {
+        log("info", "Service Worker 시작 시 활성 탭 추적 시작", {
+          tabId: activeTab.id,
+          windowId: activeTab.windowId,
+          url: activeTab.url,
+          title: activeTab.title,
+        });
+
+        currentTabId = activeTab.id;
+        tabStartTime = Date.now();
+        await logTabActivity(activeTab, tabStartTime);
+      } else {
+        log("debug", "활성 탭이 추적 제외 URL", activeTab.url);
+      }
+    } else {
+      log("debug", "활성 탭을 찾을 수 없음");
+    }
+  } catch (error) {
+    log("error", "탭 추적 초기화 중 오류", error);
   }
 }
 
 // 탭 트래커 상태 로드
 async function loadTabTrackerState() {
   try {
-    const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-    if (result.isTabTrackerEnabled !== undefined) {
-      isTabTrackerEnabled = result.isTabTrackerEnabled;
-      if (typeof debug !== "undefined")
-        debug.tracker("탭 트래커 상태 복원됨:", isTabTrackerEnabled);
+    isTabTrackerEnabledLocal = await isTabTrackerEnabled();
+    log("info", "탭 트래커 상태 복원됨", { enabled: isTabTrackerEnabledLocal });
 
-      // 탭 트래커가 활성화되어 있다면 현재 탭 추적 시작
-      if (isTabTrackerEnabled) {
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-          if (tabs[0]) {
-            if (typeof debug !== "undefined")
-              debug.tracker(
-                "Service Worker 시작 시 활성 탭 추적 시작:",
-                tabs[0].url
-              );
-            currentTabId = tabs[0].id;
-            tabStartTime = Date.now();
-            logTabActivity(tabs[0], tabStartTime);
-          }
-        });
-      }
+    // 탭 트래커가 활성화되어 있다면 현재 탭 추적 시작
+    if (isTabTrackerEnabledLocal) {
+      // initializeTabTracking 함수로 분리하여 호출
+      await initializeTabTracking();
     }
   } catch (error) {
-    console.error("❌ 탭 트래커 상태 로드 실패:", error);
+    log("error", "❌ 탭 트래커 상태 로드 실패:", error);
   }
 }
 
 // 타이머 시작
 async function startTimer(label = "") {
   if (timerState.status === "running") {
-    if (typeof debug !== "undefined")
-      debug.timer("타이머가 이미 실행 중입니다");
+    if (LOG_CONFIG.enabled) log("debug", "타이머가 이미 실행 중입니다");
     return false;
   }
 
@@ -347,15 +699,14 @@ async function startTimer(label = "") {
     }
   }, 30000); // 30초마다 저장
 
-  if (typeof debug !== "undefined") debug.timer("타이머 시작:", timerState);
+  if (LOG_CONFIG.enabled) log("debug", "타이머 시작:", timerState);
   return true;
 }
 
 // 타이머 일시정지
 async function pauseTimer() {
   if (timerState.status !== "running") {
-    if (typeof debug !== "undefined")
-      debug.timer("타이머가 실행 중이 아닙니다");
+    if (LOG_CONFIG.enabled) log("debug", "타이머가 실행 중이 아닙니다");
     return false;
   }
 
@@ -380,13 +731,13 @@ async function pauseTimer() {
     current_run_seconds: Math.round(currentRun / 1000),
   });
 
-  if (typeof debug !== "undefined") debug.timer("타이머 일시정지:", timerState);
+  if (LOG_CONFIG.enabled) log("debug", "타이머 일시정지:", timerState);
   return true;
 }
 
 // 타이머 리셋
 async function resetTimer() {
-  if (typeof debug !== "undefined") debug.timer("타이머 리셋 시작");
+  if (LOG_CONFIG.enabled) log("debug", "타이머 리셋 시작");
 
   // 주기적 저장 인터벌 정리
   if (timerState.saveInterval) {
@@ -406,7 +757,7 @@ async function resetTimer() {
   // GA4 타이머 리셋 이벤트
   await sendGA4Event("timer_reset");
 
-  if (typeof debug !== "undefined") debug.timer("타이머 리셋 완료");
+  if (LOG_CONFIG.enabled) log("debug", "타이머 리셋 완료");
   return true;
 }
 
@@ -422,8 +773,9 @@ function getTimerState() {
     // Service Worker 재시작으로 인한 시간 차이가 비정상적으로 큰 경우만 처리
     // (7일 이상은 확실히 비정상적인 경우)
     if (currentRun > 7 * 24 * 60 * 60 * 1000) {
-      console.log(
-        "⚠️ 타이머 실행 시간이 비정상적으로 큽니다 (7일 이상). 리셋합니다."
+      log(
+        "warn",
+        "타이머 실행 시간이 비정상적으로 큽니다 (7일 이상). 리셋합니다."
       );
       resetTimer();
       return {
@@ -442,8 +794,7 @@ function getTimerState() {
 // 타이머 상태 브로드캐스트 (모든 UI에 알림)
 function broadcastTimerState() {
   const state = getTimerState();
-  if (typeof debug !== "undefined")
-    debug.timer("타이머 상태 브로드캐스트:", state);
+  if (LOG_CONFIG.enabled) log("debug", "타이머 상태 브로드캐스트:", state);
 
   // 모든 탭에 메시지 전송
   chrome.tabs.query({}, tabs => {
@@ -466,278 +817,333 @@ function broadcastTimerState() {
   });
 }
 
-// 기존 통계 데이터 마이그레이션 (titles 타입 정규화)
-async function migrateLegacyStats() {
-  try {
-    if (typeof debug !== "undefined")
-      debug.log("기존 통계 데이터 마이그레이션 시작...");
-
-    const result = await chrome.storage.local.get([
-      "dailyStats",
-      "realTimeStats",
-    ]);
-    let migrationNeeded = false;
-
-    // dailyStats 마이그레이션
-    if (result.dailyStats) {
-      const dailyStats = result.dailyStats;
-
-      Object.keys(dailyStats).forEach(dayKey => {
-        Object.keys(dailyStats[dayKey]).forEach(domain => {
-          const bucket = dailyStats[dayKey][domain];
-
-          if (bucket.titles && !Array.isArray(bucket.titles)) {
-            // Set이나 다른 타입을 배열로 변환
-            if (bucket.titles instanceof Set) {
-              bucket.titles = Array.from(bucket.titles);
-            } else if (typeof bucket.titles === "string") {
-              bucket.titles = [bucket.titles];
-            } else {
-              bucket.titles = [];
-            }
-            migrationNeeded = true;
-          }
-        });
-      });
-
-      if (migrationNeeded) {
-        await chrome.storage.local.set({ dailyStats });
-        if (typeof debug !== "undefined")
-          debug.log("dailyStats 마이그레이션 완료");
-      }
-    }
-
-    if (typeof debug !== "undefined") debug.log("데이터 마이그레이션 완료");
-  } catch (error) {
-    console.error("❌ 데이터 마이그레이션 실패:", error);
-  }
-}
-
 // 탭 활성화 이벤트 리스너
 chrome.tabs.onActivated.addListener(async activeInfo => {
-  if (typeof debug !== "undefined")
-    debug.tracker("탭 활성화 이벤트:", activeInfo);
+  log("info", "탭 활성화 이벤트 감지", {
+    newTabId: activeInfo.tabId,
+    windowId: activeInfo.windowId,
+    previousTabId: currentTabId,
+    previousTabStartTime: tabStartTime
+      ? new Date(tabStartTime).toLocaleString()
+      : null,
+  });
 
-  const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  if (typeof debug !== "undefined")
-    debug.tracker("탭 트래커 상태:", result.isTabTrackerEnabled);
-
-  if (!result.isTabTrackerEnabled) {
-    if (typeof debug !== "undefined") debug.tracker("탭 트래커가 비활성화됨");
+  if (!(await isTabTrackerEnabled())) {
+    log("debug", "탭 트래커가 비활성화됨");
     return;
   }
 
   try {
     // 이전 탭의 종료 시간 기록
     if (currentTabId && tabStartTime) {
-      if (typeof debug !== "undefined")
-        debug.timer("이전 탭 종료 기록:", currentTabId, tabStartTime);
-      await recordTabEndTime(currentTabId, tabStartTime);
+      log("info", "이전 탭 종료 처리 시작", {
+        tabId: currentTabId,
+        startTime: new Date(tabStartTime).toLocaleString(),
+        duration: Math.round((Date.now() - tabStartTime) / 1000) + "초",
+      });
+
+      const completed = await findAndCompleteTabLog(currentTabId, tabStartTime);
+      log(completed ? "success" : "warn", "이전 탭 종료 처리 결과", {
+        completed,
+        tabId: currentTabId,
+      });
+    } else {
+      log(
+        "debug",
+        "이전 탭 정보 없음 - 첫 번째 탭이거나 Service Worker 재시작"
+      );
     }
 
     const tab = await chrome.tabs.get(activeInfo.tabId);
-    if (typeof debug !== "undefined")
-      debug.tracker("새 탭 정보:", { title: tab.title, url: tab.url });
+    log("info", "새 활성 탭 정보", {
+      tabId: tab.id,
+      title: tab.title,
+      url: tab.url,
+      windowId: tab.windowId,
+    });
 
     currentTabId = activeInfo.tabId;
     tabStartTime = Date.now(); // 새 탭 시작 시간 기록
 
     await logTabActivity(tab, tabStartTime);
-    if (typeof debug !== "undefined") debug.tracker("탭 활동 로그 저장 완료");
+    log("success", "새 탭 활동 로그 저장 완료", {
+      tabId: currentTabId,
+      startTime: new Date(tabStartTime).toLocaleString(),
+    });
   } catch (error) {
-    console.error("❌ 탭 정보 가져오기 실패:", error);
+    log("error", "탭 활성화 이벤트 처리 중 오류", {
+      error: error.message,
+      stack: error.stack,
+      activeInfo,
+    });
   }
 });
 
 // 탭 업데이트 이벤트 리스너 (URL 변경 등)
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  const result = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  if (!result.isTabTrackerEnabled) return;
+  if (!(await isTabTrackerEnabled())) return;
 
   // 현재 활성 탭이고 URL이 변경된 경우
   if (tabId === currentTabId && changeInfo.url) {
-    // URL 변경 시에는 새로운 시작 시간으로 설정
+    log("info", "탭 URL 변경 감지", {
+      tabId,
+      oldUrl: "이전 URL",
+      newUrl: changeInfo.url,
+      currentStartTime: tabStartTime
+        ? new Date(tabStartTime).toLocaleString()
+        : null,
+    });
+
+    // URL 변경 시 이전 로그 완료 처리
+    if (tabStartTime) {
+      await findAndCompleteTabLog(tabId, tabStartTime);
+    }
+
+    // 새로운 URL에 대한 시작 시간 설정
     tabStartTime = Date.now();
     await logTabActivity(tab, tabStartTime);
+  }
+
+  // 현재 활성 탭이 아니지만 완료되지 않은 로그가 있을 수 있는 경우도 처리
+  else if (changeInfo.url) {
+    // 비활성 탭의 URL 변경도 완료 처리
+    await findAndCompleteTabLog(tabId);
   }
 });
 
 // 탭이 닫힐 때 실제 사용 시간을 기록
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   try {
-    const tracker = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-    if (!tracker.isTabTrackerEnabled) return;
+    if (!(await isTabTrackerEnabled())) return;
 
     // 현재 추적 중이던 탭이 닫힌 경우
     if (currentTabId === tabId && tabStartTime) {
-      await recordTabEndTime(tabId, tabStartTime);
+      await findAndCompleteTabLog(tabId, tabStartTime);
       currentTabId = null;
       tabStartTime = null;
       return;
     }
 
     // 비활성 탭이 닫힌 경우에도 마지막 미종료 로그가 있으면 정리
-    const result = await chrome.storage.local.get(["tabLogs"]);
-    const tabLogs = result.tabLogs || [];
-    for (let i = tabLogs.length - 1; i >= 0; i--) {
-      const log = tabLogs[i];
-      if (log.tabId === tabId && !log.actualTime) {
-        const start =
-          typeof log.startTime === "number"
-            ? log.startTime
-            : new Date(log.timestamp).getTime();
-        const actualTime = Date.now() - start;
-
-        // 비정상적으로 긴 시간은 제한 (예: 24시간 이상)
-        const maxReasonableTime = 24 * 60 * 60 * 1000; // 24시간
-        const finalActualTime =
-          actualTime > maxReasonableTime ? maxReasonableTime : actualTime;
-
-        log.actualTime = finalActualTime;
-        log.endTime = new Date().toISOString();
-
-        if (typeof debug !== "undefined") {
-          debug.timer(
-            `탭 ${tabId} 종료 시 실제 사용 시간 기록: ${Math.round(
-              finalActualTime / 1000
-            )}초`
-          );
-        }
-        break;
-      }
-    }
-    await chrome.storage.local.set({ tabLogs });
+    await findAndCompleteTabLog(tabId);
   } catch (error) {
-    console.error("탭 종료 처리 중 오류:", error);
+    log("error", "탭 종료 처리 중 오류:", error);
   }
 });
 
-// 이전 탭 종료 시간 기록
-async function recordTabEndTime(tabId, startTime) {
-  // 탭 트래커 상태 확인
-  const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  if (!trackerResult.isTabTrackerEnabled) {
-    if (typeof debug !== "undefined")
-      debug.tracker("탭 트래커가 비활성화되어 종료 시간 기록을 건너뜁니다");
-    return;
-  }
-
+// 윈도우 포커스 변경 이벤트 리스너
+chrome.windows.onFocusChanged.addListener(async windowId => {
   try {
-    const result = await chrome.storage.local.get(["tabLogs"]);
-    const tabLogs = result.tabLogs || [];
+    if (!(await isTabTrackerEnabled())) return;
 
-    // 가장 최근 로그 중에서 해당 탭의 로그 찾기
-    for (let i = tabLogs.length - 1; i >= 0; i--) {
-      const log = tabLogs[i];
-      if (log.tabId === tabId && !log.actualTime) {
-        // 실제 사용 시간 계산 및 저장 (탭 활성화 시간만)
-        const actualTime = Date.now() - startTime;
-
-        // 비정상적으로 긴 시간은 제한 (예: 24시간 이상)
-        const maxReasonableTime = 24 * 60 * 60 * 1000; // 24시간
-        const finalActualTime =
-          actualTime > maxReasonableTime ? maxReasonableTime : actualTime;
-
-        log.actualTime = finalActualTime;
-        log.endTime = new Date().toISOString();
-
-        if (typeof debug !== "undefined") {
-          debug.timer(
-            `탭 ${tabId} 실제 사용 시간 기록: ${Math.round(
-              finalActualTime / 1000
-            )}초`
-          );
-        }
-        break;
-      }
+    // 개발자 도구나 팝업 등은 무시
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      log("debug", "포커스가 브라우저 밖으로 이동");
+      return;
     }
 
-    await chrome.storage.local.set({ tabLogs });
+    log("debug", "윈도우 포커스 변경", { windowId });
+
+    // 이전 탭 완료 처리
+    if (currentTabId && tabStartTime) {
+      await findAndCompleteTabLog(currentTabId, tabStartTime);
+    }
+
+    // 새로 포커스된 윈도우의 활성 탭 추적
+    const window = await chrome.windows.get(windowId, { populate: true });
+    const activeTab = window.tabs.find(tab => tab.active);
+
+    if (
+      activeTab &&
+      activeTab.url &&
+      !activeTab.url.startsWith("chrome://") &&
+      !activeTab.url.startsWith("chrome-extension://") &&
+      !activeTab.url.startsWith("edge://") &&
+      !activeTab.url.startsWith("about:")
+    ) {
+      log("info", "윈도우 포커스 변경으로 새 탭 추적", {
+        windowId,
+        tabId: activeTab.id,
+        url: activeTab.url,
+      });
+
+      currentTabId = activeTab.id;
+      tabStartTime = Date.now();
+      await logTabActivity(activeTab, tabStartTime);
+    } else {
+      log("debug", "새 윈도우에 추적 가능한 활성 탭 없음");
+      currentTabId = null;
+      tabStartTime = null;
+    }
   } catch (error) {
-    console.error("탭 종료 시간 기록 실패:", error);
+    log("error", "윈도우 포커스 변경 처리 중 오류:", error);
   }
-}
+});
 
-// 탭 활동 로그 저장
+// 탭 활동 로그 저장 (환경별 로깅 적용)
 async function logTabActivity(tab, startTime = null) {
-  // 탭 트래커 상태 확인
-  const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  if (!trackerResult.isTabTrackerEnabled) {
-    if (typeof debug !== "undefined")
-      debug.tracker("탭 트래커가 비활성화되어 데이터 저장을 건너뜁니다");
-    return;
-  }
-
-  if (typeof debug !== "undefined")
-    debug.tracker("탭 활동 로그 시작:", { title: tab.title, url: tab.url });
-
-  if (
-    !tab.url ||
-    tab.url.startsWith("chrome://") ||
-    tab.url.startsWith("chrome-extension://")
-  ) {
-    if (typeof debug !== "undefined") debug.tracker("제외된 URL:", tab.url);
-    return;
-  }
-
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    title: tab.title || "제목 없음",
-    url: tab.url,
-    timeFormatted: new Date().toLocaleString("ko-KR"),
-    sessionId: generateSessionId(),
-    domain: extractDomain(tab.url),
-    tabId: tab.id,
-    startTime: startTime || Date.now(),
-    actualTime: null, // 실제 사용 시간 (나중에 계산)
-    endTime: null,
-  };
-
-  const result = await chrome.storage.local.get([
-    "tabLogs",
-    "dailyStats",
-    "realTimeStats",
-  ]);
-  const tabLogs = result.tabLogs || [];
-
-  tabLogs.push(logEntry);
-
-  // 날짜 기반 정리 (90일 이상 된 로그만 삭제)
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-  const filteredLogs = tabLogs.filter(log => {
-    const logDate = new Date(log.timestamp);
-    return logDate >= ninetyDaysAgo;
-  });
-
-  // 필터링된 로그로 교체
-  if (filteredLogs.length !== tabLogs.length) {
-    if (typeof debug !== "undefined") {
-      debug.storage(
-        `오래된 로그 ${tabLogs.length - filteredLogs.length}개 삭제됨`
-      );
+  try {
+    // 탭 객체 유효성 검사
+    if (!tab || !tab.id || !tab.url) {
+      log("error", "유효하지 않은 탭 객체", tab);
+      return;
     }
-    tabLogs.length = 0;
-    tabLogs.push(...filteredLogs);
-  }
 
-  // 실시간 통계 업데이트
-  await updateRealTimeStats(logEntry, result.realTimeStats || {});
+    // 탭 트래커 상태 확인
+    const trackerEnabled = await isTabTrackerEnabled();
+    if (!trackerEnabled) {
+      log("debug", "탭 트래커가 비활성화됨");
+      return;
+    }
 
-  // 일별 통계 업데이트
-  await updateDailyStats(logEntry, result.dailyStats || {});
+    log("info", "탭 활동 로그 시작", {
+      title: tab.title,
+      url: tab.url,
+      tabId: tab.id,
+    });
 
-  await chrome.storage.local.set({ tabLogs });
+    // URL 유효성 검사
+    if (
+      !tab.url ||
+      tab.url.startsWith("chrome://") ||
+      tab.url.startsWith("chrome-extension://") ||
+      tab.url.startsWith("edge://") ||
+      tab.url.startsWith("about:")
+    ) {
+      log("debug", "제외된 URL", tab.url);
+      return;
+    }
 
-  if (typeof debug !== "undefined")
-    debug.storage("로그 저장 완료:", {
-      totalLogs: tabLogs.length,
-      latestLog: {
+    const timestamp = new Date().toISOString();
+    const startTimeISO = startTime
+      ? new Date(startTime).toISOString()
+      : timestamp;
+
+    const logEntry = {
+      timestamp,
+      title: tab.title || "제목 없음",
+      url: tab.url,
+      domain: extractDomain(tab.url),
+      tabId: tab.id,
+      startTime: startTimeISO,
+      actualTime: null,
+      endTime: null,
+    };
+
+    // tabLogs를 날짜별로 구조화하여 저장
+    const dayKey = generateDateKey(new Date(logEntry.timestamp));
+    log("debug", "날짜 키 생성", dayKey);
+
+    const tabLogs = await loadTabLogs();
+    log("debug", "현재 tabLogs 구조", {
+      keys: Object.keys(tabLogs),
+      totalDays: Object.keys(tabLogs).length,
+      currentDayExists: !!tabLogs[dayKey],
+      currentDayCount: tabLogs[dayKey]?.length || 0,
+    });
+
+    // 날짜별 배열 초기화
+    if (!tabLogs[dayKey]) {
+      tabLogs[dayKey] = [];
+      log("debug", "새로운 날짜 배열 생성", { dayKey });
+    }
+
+    // 중복 로그 방지 (동일한 탭ID와 시간의 로그가 이미 존재하는지 확인)
+    const isDuplicate = tabLogs[dayKey].some(
+      log =>
+        log.tabId === logEntry.tabId &&
+        log.startTime === logEntry.startTime &&
+        log.url === logEntry.url
+    );
+
+    if (isDuplicate) {
+      log("warn", "중복 로그 감지 - 저장 건너뜀", {
+        tabId: logEntry.tabId,
+        url: logEntry.url,
+        startTime: logEntry.startTime,
+      });
+      return;
+    }
+
+    tabLogs[dayKey].push(logEntry);
+    log("info", "로그 추가됨", {
+      dayKey,
+      todayLogsCount: tabLogs[dayKey].length,
+      logEntry: {
         domain: logEntry.domain,
         title: logEntry.title.substring(0, 30),
-        timestamp: logEntry.timeFormatted,
+        timestamp: logEntry.timestamp,
+        tabId: logEntry.tabId,
       },
     });
+
+    // 90일 이상 된 날짜별 로그 정리
+    const logsBeforeCleanup = Object.keys(tabLogs).length;
+    cleanupOldLogs(tabLogs);
+    const logsAfterCleanup = Object.keys(tabLogs).length;
+
+    if (logsBeforeCleanup !== logsAfterCleanup) {
+      log("info", "오래된 로그 정리됨", {
+        before: logsBeforeCleanup,
+        after: logsAfterCleanup,
+        cleaned: logsBeforeCleanup - logsAfterCleanup,
+      });
+    }
+
+    // 일자별 통계 업데이트
+    try {
+      await updateDailyStatistics(logEntry);
+      log("debug", "일자별 통계 업데이트 완료");
+    } catch (error) {
+      log("error", "일자별 통계 업데이트 실패", error);
+    }
+
+    // tabLogs 저장 시도
+    log("debug", "tabLogs 저장 시도 중...", {
+      totalDays: Object.keys(tabLogs).length,
+      totalLogs: Object.values(tabLogs).reduce(
+        (sum, dailyLogs) => sum + dailyLogs.length,
+        0
+      ),
+      todayLogs: tabLogs[dayKey]?.length || 0,
+    });
+
+    const saveSuccess = await saveTabLogs(tabLogs);
+
+    if (saveSuccess) {
+      const totalLogsCount = Object.values(tabLogs).reduce(
+        (sum, dailyLogs) => sum + dailyLogs.length,
+        0
+      );
+      log("success", "로그 저장 완료", {
+        totalLogs: totalLogsCount,
+        todayLogs: tabLogs[dayKey]?.length || 0,
+        allDays: Object.keys(tabLogs),
+      });
+    } else {
+      log("error", "로그 저장 실패 - 재시도 중...");
+
+      // 저장 실패 시 한 번 더 시도
+      setTimeout(async () => {
+        try {
+          const retrySuccess = await saveTabLogs(tabLogs);
+          if (retrySuccess) {
+            log("success", "로그 저장 재시도 성공");
+          } else {
+            log("error", "로그 저장 재시도도 실패");
+          }
+        } catch (retryError) {
+          log("error", "로그 저장 재시도 중 예외 발생", retryError);
+        }
+      }, 1000);
+    }
+  } catch (error) {
+    log("error", "logTabActivity 실행 중 치명적 오류", {
+      error: error.message,
+      stack: error.stack,
+      tab: tab ? { id: tab.id, url: tab.url, title: tab.title } : null,
+    });
+  }
 }
 
 // 도메인 추출 함수
@@ -750,141 +1156,113 @@ function extractDomain(url) {
   }
 }
 
-// 세션 ID 생성
-function generateSessionId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
+// 중복 데이터 정리 (성능 향상)
+async function cleanupDuplicateData() {
+  try {
+    const result = await chrome.storage.local.get(["realTimeStats"]);
 
-// 실시간 통계 업데이트
-async function updateRealTimeStats(logEntry, currentStats) {
-  // 탭 트래커 상태 확인
-  const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  if (!trackerResult.isTabTrackerEnabled) {
-    if (typeof debug !== "undefined")
-      debug.tracker(
-        "탭 트래커가 비활성화되어 실시간 통계 업데이트를 건너뜁니다"
-      );
-    return;
-  }
+    if (result.realTimeStats) {
+      // 구 실시간 통계 데이터만 제거 (dailyStats는 새 구조로 사용)
+      await chrome.storage.local.remove(["realTimeStats"]);
 
-  const now = new Date();
-  const hourKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(now.getDate()).padStart(2, "0")}-${String(
-    now.getHours()
-  ).padStart(2, "0")}`;
-
-  if (!currentStats[hourKey]) {
-    currentStats[hourKey] = {};
-  }
-
-  if (!currentStats[hourKey][logEntry.domain]) {
-    currentStats[hourKey][logEntry.domain] = {
-      count: 0,
-      lastVisit: logEntry.timestamp,
-      totalTime: 0,
-    };
-  }
-
-  currentStats[hourKey][logEntry.domain].count++;
-  currentStats[hourKey][logEntry.domain].lastVisit = logEntry.timestamp;
-
-  // 오래된 시간별 데이터 정리 (24시간 이상)
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  Object.keys(currentStats).forEach(key => {
-    const keyDate = new Date(key.replace(/-/g, "/"));
-    if (keyDate < twentyFourHoursAgo) {
-      delete currentStats[key];
+      if (LOG_CONFIG.enabled) {
+        log("info", "✅ 구 실시간 통계 데이터 정리 완료 (realTimeStats 제거)");
+      }
     }
-  });
-
-  await chrome.storage.local.set({ realTimeStats: currentStats });
+  } catch (error) {
+    log("error", "❌ 중복 데이터 정리 실패:", error);
+  }
 }
 
-// 일별 통계 업데이트 - titles 타입 안정성 개선
-async function updateDailyStats(logEntry, currentStats) {
-  // 탭 트래커 상태 확인
-  const trackerResult = await chrome.storage.local.get(["isTabTrackerEnabled"]);
-  if (!trackerResult.isTabTrackerEnabled) {
-    console.log("🚫 탭 트래커가 비활성화되어 일별 통계 업데이트를 건너뜁니다");
-    return;
-  }
+// 일자별 통계 업데이트
+async function updateDailyStatistics(logEntry) {
+  try {
+    const dayKey = generateDateKey(new Date(logEntry.timestamp));
 
-  const date = new Date(logEntry.timestamp);
-  const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(date.getDate()).padStart(2, "0")}`;
+    const result = await chrome.storage.local.get(["dailyStats"]);
+    const dailyStats = result.dailyStats || {};
 
-  if (!currentStats[dayKey]) {
-    currentStats[dayKey] = {};
-  }
+    if (!dailyStats[dayKey]) {
+      dailyStats[dayKey] = {
+        totalTime: 0,
+        sites: {},
+        date: dayKey,
+        lastUpdate: new Date().toISOString(),
+      };
+    }
 
-  // 도메인별 버킷 생성 또는 가져오기
-  const bucket = currentStats[dayKey][logEntry.domain] || {
-    count: 0,
-    firstVisit: logEntry.timestamp,
-    lastVisit: logEntry.timestamp,
-    titles: new Set(),
-  };
+    const siteStats = dailyStats[dayKey].sites[logEntry.domain] || {
+      time: 0,
+      visits: 0,
+      lastVisit: logEntry.timestamp,
+    };
 
-  // titles 속성 타입 정규화 (Set 보장)
-  if (!bucket.titles) {
-    bucket.titles = new Set();
-  } else if (Array.isArray(bucket.titles)) {
-    // 스토리지에서 복원된 배열을 Set으로 변환
-    bucket.titles = new Set(bucket.titles);
-  } else if (typeof bucket.titles === "string") {
-    // 문자열인 경우 단일 항목으로 Set 생성
-    bucket.titles = new Set([bucket.titles]);
-  } else if (!(bucket.titles instanceof Set)) {
-    // 기타 타입인 경우 새 Set 생성
-    bucket.titles = new Set();
-  }
+    // 방문 횟수 증가
+    siteStats.visits++;
+    siteStats.lastVisit = logEntry.timestamp;
 
-  // 통계 업데이트
-  bucket.count++;
-  bucket.lastVisit = logEntry.timestamp;
-  bucket.titles.add(logEntry.title);
+    dailyStats[dayKey].sites[logEntry.domain] = siteStats;
+    dailyStats[dayKey].lastUpdate = new Date().toISOString();
 
-  // 버킷을 currentStats에 할당
-  currentStats[dayKey][logEntry.domain] = bucket;
-
-  // 스토리지 저장 전에 Set을 배열로 변환
-  const statsToSave = JSON.parse(JSON.stringify(currentStats));
-  Object.keys(statsToSave).forEach(dayKey => {
-    Object.keys(statsToSave[dayKey]).forEach(domain => {
-      if (currentStats[dayKey][domain].titles instanceof Set) {
-        statsToSave[dayKey][domain].titles = Array.from(
-          currentStats[dayKey][domain].titles
-        );
+    // 90일 이상 된 통계 정리
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    Object.keys(dailyStats).forEach(key => {
+      const statDate = new Date(key);
+      if (statDate < ninetyDaysAgo) {
+        delete dailyStats[key];
       }
     });
-  });
 
-  // 30일 자동 정리 기능 비활성화 (데이터 손실 방지)
-  // const thirtyDaysAgo = new Date(date.getTime() - 30 * 24 * 60 * 60 * 1000);
-  // Object.keys(statsToSave).forEach(key => {
-  //   const keyDate = new Date(key);
-  //   if (keyDate < thirtyDaysAgo) {
-  //     delete statsToSave[key];
-  //     delete currentStats[key]; // 메모리에서도 제거
-  //   }
-  // });
+    await chrome.storage.local.set({ dailyStats });
 
-  await chrome.storage.local.set({ dailyStats: statsToSave });
+    if (LOG_CONFIG.enabled) {
+      log("debug", "일자별 통계 업데이트:", {
+        date: dayKey,
+        domain: logEntry.domain,
+        visits: siteStats.visits,
+      });
+    }
+  } catch (error) {
+    log("error", "❌ 일자별 통계 업데이트 실패:", error);
+  }
+}
+
+// 일자별 통계에 시간 추가
+async function updateDailyTime(domain, timestamp, timeMs) {
+  try {
+    const dayKey = generateDateKey(new Date(timestamp));
+
+    const result = await chrome.storage.local.get(["dailyStats"]);
+    const dailyStats = result.dailyStats || {};
+
+    if (dailyStats[dayKey] && dailyStats[dayKey].sites[domain]) {
+      dailyStats[dayKey].sites[domain].time += timeMs;
+      dailyStats[dayKey].totalTime += timeMs;
+      dailyStats[dayKey].lastUpdate = new Date().toISOString();
+
+      await chrome.storage.local.set({ dailyStats });
+
+      if (LOG_CONFIG.enabled) {
+        log("debug", "일자별 시간 업데이트:", {
+          date: dayKey,
+          domain: domain,
+          addedTime: Math.round(timeMs / 1000) + "초",
+        });
+      }
+    }
+  } catch (error) {
+    log("error", "❌ 일자별 시간 업데이트 실패:", error);
+  }
 }
 
 // 메시지 처리
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (typeof debug !== "undefined")
-    debug.log("백그라운드 메시지 수신:", request);
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  if (LOG_CONFIG.enabled) log("debug", "백그라운드 메시지 수신:", request);
 
   if (request.action === "updateTabTracker") {
-    isTabTrackerEnabled = request.enabled;
-    if (typeof debug !== "undefined")
-      debug.tracker("탭 트래커 상태 변경:", isTabTrackerEnabled);
+    isTabTrackerEnabledLocal = request.enabled;
+    if (LOG_CONFIG.enabled)
+      log("debug", "탭 트래커 상태 변경:", isTabTrackerEnabledLocal);
 
     // GA4 탭 트래커 토글 이벤트
     sendGA4Event("tab_tracker_toggled", {
@@ -895,8 +1273,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // 현재 활성 탭 확인
       chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         if (tabs[0]) {
-          if (typeof debug !== "undefined")
-            debug.tracker("초기 활성 탭 설정:", tabs[0].url);
+          if (LOG_CONFIG.enabled)
+            log("debug", "초기 활성 탭 설정:", tabs[0].url);
           currentTabId = tabs[0].id;
           tabStartTime = Date.now();
           logTabActivity(tabs[0], tabStartTime);
@@ -904,12 +1282,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     } else {
       // 탭 트래커 비활성화 시 추적 상태만 초기화 (데이터 수집 중단)
-      if (typeof debug !== "undefined")
-        debug.tracker("탭 트래커 비활성화 - 데이터 수집 중단");
+      if (LOG_CONFIG.enabled)
+        log("debug", "탭 트래커 비활성화 - 데이터 수집 중단");
       currentTabId = null;
       tabStartTime = null;
-      if (typeof debug !== "undefined")
-        debug.tracker("탭 트래커 비활성화 완료");
+      if (LOG_CONFIG.enabled) log("debug", "탭 트래커 비활성화 완료");
     }
     sendResponse({ success: true });
   }
@@ -937,6 +1314,107 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 팝업에서 전송된 GA4 이벤트 처리
     sendGA4Event(request.eventName, request.parameters || {});
     sendResponse({ success: true });
+  }
+
+  // tabLogs 디버깅용 액션들
+  else if (request.action === "DEBUG_GET_TABLOGS") {
+    try {
+      const tabLogs = await loadTabLogs();
+      const stats = {
+        totalDays: Object.keys(tabLogs).length,
+        totalLogs: Object.values(tabLogs).reduce(
+          (sum, logs) => sum + logs.length,
+          0
+        ),
+        todayKey: generateDateKey(),
+        todayLogs: tabLogs[generateDateKey()]?.length || 0,
+        recentDays: Object.keys(tabLogs).sort().slice(-7), // 최근 7일
+        currentTabId,
+        tabStartTime: tabStartTime
+          ? new Date(tabStartTime).toLocaleString()
+          : null,
+        isTrackerEnabled: isTabTrackerEnabledLocal,
+        // 추가 디버깅 정보
+        incompleteLogsCount: Object.values(tabLogs).reduce(
+          (count, dailyLogs) => {
+            return count + dailyLogs.filter(log => !log.actualTime).length;
+          },
+          0
+        ),
+        lastTabLogs:
+          Object.keys(tabLogs).length > 0
+            ? Object.values(tabLogs)[Object.keys(tabLogs).length - 1].slice(-3)
+            : [],
+      };
+
+      log("info", "DEBUG: tabLogs 상태 조회", stats);
+      sendResponse({ success: true, tabLogs, stats });
+    } catch (error) {
+      log("error", "DEBUG: tabLogs 조회 실패", error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  } else if (request.action === "DEBUG_FORCE_LOG_CURRENT_TAB") {
+    try {
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (tabs && tabs[0]) {
+        log("info", "DEBUG: 현재 탭 강제 로그 추가", { tab: tabs[0].url });
+        await logTabActivity(tabs[0], Date.now());
+        sendResponse({ success: true, message: "현재 탭 로그 추가됨" });
+      } else {
+        sendResponse({ success: false, message: "활성 탭을 찾을 수 없음" });
+      }
+    } catch (error) {
+      log("error", "DEBUG: 현재 탭 로그 추가 실패", error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  } else if (request.action === "DEBUG_COMPLETE_ALL_LOGS") {
+    try {
+      const tabLogs = await loadTabLogs();
+      let completedCount = 0;
+
+      // 모든 미완료 로그를 완료 처리
+      for (const [dateKey, dailyLogs] of Object.entries(tabLogs)) {
+        for (const logEntry of dailyLogs) {
+          if (!logEntry.actualTime) {
+            // 기본적으로 30초의 사용 시간을 할당 (실제 시간을 모르므로)
+            const estimatedTime = 30 * 1000; // 30초
+            logEntry.actualTime = estimatedTime;
+            logEntry.endTime = new Date().toISOString();
+
+            // 일자별 통계에도 추가
+            await updateDailyTime(
+              logEntry.domain,
+              logEntry.timestamp,
+              estimatedTime
+            );
+            completedCount++;
+          }
+        }
+      }
+
+      if (completedCount > 0) {
+        await saveTabLogs(tabLogs);
+        log("success", "DEBUG: 미완료 로그 강제 완료", { completedCount });
+        sendResponse({
+          success: true,
+          message: `${completedCount}개의 미완료 로그를 완료 처리했습니다.`,
+        });
+      } else {
+        sendResponse({
+          success: true,
+          message: "완료할 미완료 로그가 없습니다.",
+        });
+      }
+    } catch (error) {
+      log("error", "DEBUG: 미완료 로그 완료 처리 실패", error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
   }
 
   return true;

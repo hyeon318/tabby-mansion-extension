@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 데이터 로딩 및 필터링
   // =========================================================================
 
-  /** 탭 로그 데이터 로드 */
+  /** 탭 로그 데이터 로드 (성능 최적화) */
   async function loadData() {
     try {
       if (
@@ -266,32 +266,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         chrome.runtime &&
         chrome.runtime.id
       ) {
-        const result = await chrome.storage.local.get([
-          "tabLogs",
-          "isTabTrackerEnabled",
-          "dailyStats",
-        ]);
-        allTabLogs = result.tabLogs || [];
-        isTabTrackerEnabled =
-          result.isTabTrackerEnabled !== undefined
-            ? result.isTabTrackerEnabled
-            : true;
+        // 새로운 구조의 tabLogs 로드
+        const tabLogsResult = await chrome.storage.local.get(["tabLogs"]);
+        const tabLogs = tabLogsResult.tabLogs || {};
 
-        // dailyStats titles 정규화(참조용)
-        if (result.dailyStats) {
-          Object.keys(result.dailyStats).forEach(dayKey => {
-            Object.keys(result.dailyStats[dayKey]).forEach(domain => {
-              const bucket = result.dailyStats[dayKey][domain];
-              if (bucket.titles && !Array.isArray(bucket.titles)) {
-                if (bucket.titles instanceof Set)
-                  bucket.titles = Array.from(bucket.titles);
-                else if (typeof bucket.titles === "string")
-                  bucket.titles = [bucket.titles];
-                else bucket.titles = [];
-              }
-            });
-          });
-        }
+        // 날짜별로 이미 정렬된 데이터를 사용 (전체 정렬 제거)
+        const dateKeys = Object.keys(tabLogs).sort(); // 날짜 키만 정렬
+
+        // 날짜순으로 정렬된 로그 배열 생성
+        allTabLogs = [];
+        dateKeys.forEach(dateKey => {
+          if (tabLogs[dateKey] && Array.isArray(tabLogs[dateKey])) {
+            allTabLogs.push(...tabLogs[dateKey]);
+          }
+        });
+
+        const trackerResult = await chrome.storage.local.get([
+          "isTabTrackerEnabled",
+        ]);
+        isTabTrackerEnabled =
+          trackerResult.isTabTrackerEnabled !== undefined
+            ? trackerResult.isTabTrackerEnabled
+            : true;
       } else {
         // 확장 외부 접근 가드
         document.body.innerHTML = `
@@ -355,9 +351,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Number.isFinite(sec) ? Math.max(0, sec) : 0;
   }
 
+  /** 통합된 로그 시간 계산 함수 - 중복 코드 제거 */
+  function calculateLogEndTime(log) {
+    const sMs = new Date(log.timestamp).getTime();
+    if (!Number.isFinite(sMs)) return sMs + 5000;
+
+    let eMs = null;
+
+    // 1. endTime이 이미 있는 경우
+    if (log.endTime) {
+      const t = new Date(log.endTime).getTime();
+      if (Number.isFinite(t) && t > sMs) eMs = t;
+    }
+
+    // 2. actualTime이 있는 경우
+    if (!eMs && log.actualTime && log.actualTime > 0) {
+      eMs = sMs + log.actualTime;
+    }
+
+    // 3. 다음 로그와의 시간 차이 계산
+    if (!eMs) {
+      let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
+      if (nextMs && nextMs > sMs && nextMs - sMs < 1800000) {
+        // 30분 제한
+        eMs = nextMs;
+      }
+    }
+
+    // 4. 기본값 사용 (과대계산 방지)
+    if (!eMs) {
+      eMs = sMs + 5000; // 5초 기본값
+    }
+
+    return eMs;
+  }
+
   /** 추정 ms(동일 탭/전역 next, endTime, actualTime 고려) */
   function getEstimatedTime(log, index = 0, logs = []) {
-    const AVERAGE = 30000; // 30s
+    const AVERAGE = 5000; // 5s (과대계산 방지)
     const MAX_TIME = 1800000; // 30분으로 제한 (2시간 59분 문제 해결)
 
     if (log.actualTime && log.actualTime > 0) {
@@ -372,12 +403,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const diff = nxt - curMs;
       if (Number.isFinite(diff) && diff > 0 && diff < MAX_TIME) return diff;
     } else {
-      if (isTabTrackerEnabled) {
-        const diff = Date.now() - curMs;
-        if (Number.isFinite(diff) && diff > 0) return Math.min(diff, MAX_TIME);
-      } else {
-        return AVERAGE;
-      }
+      // 마지막 로그는 기본값 사용 (실시간 계산 제거로 성능 향상)
+      return AVERAGE;
     }
     return AVERAGE;
   }
@@ -473,9 +500,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (Number.isFinite(diff) && diff > 0 && diff < 10800000) spanMs = diff;
       }
       if (spanMs === 0) {
-        spanMs = isTabTrackerEnabled
-          ? Math.min(Math.max(0, Date.now() - curMs), 10800000)
-          : 30000;
+        spanMs = 5000; // 기본값 5초 사용 (과대계산 방지)
       }
     }
 
@@ -512,10 +537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
         if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
       }
-      if (!eMs)
-        eMs = isTabTrackerEnabled
-          ? Math.min(sMs + 10800000, Date.now())
-          : sMs + 30000;
+      if (!eMs) eMs = sMs + 5000; // 기본 5초 사용 (과대계산 방지)
 
       const a = Math.max(sMs, startMs);
       const b = Math.min(eMs, endMs);
@@ -938,6 +960,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function exportData() {
+    const enrichedData = enrichDataWithCurrentSession(filteredData);
     const exportPayload = {
       filters: {
         startDate: startDateEl.value,
@@ -946,7 +969,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         site: currentFilters.site,
         view: currentView,
       },
-      data: filteredData,
+      data: enrichedData,
       exportDate: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
@@ -962,6 +985,60 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /** 현재 세션의 실제 시간을 계산하여 데이터 보강 */
+  function enrichDataWithCurrentSession(data) {
+    return data.map(log => {
+      // 불필요한 레거시 필드 제거 및 타입 정리
+      const cleanLog = {
+        timestamp: log.timestamp,
+        title: log.title,
+        url: log.url,
+        domain: log.domain,
+        tabId: log.tabId,
+        startTime: log.startTime,
+        actualTime: log.actualTime,
+        endTime: log.endTime,
+      };
+
+      // 이미 actualTime이 있는 로그는 그대로 유지
+      if (cleanLog.actualTime && cleanLog.actualTime > 0) {
+        return cleanLog;
+      }
+
+      // actualTime이 없는 로그에 대해 다음 로그와의 시간 차이 계산
+      const logIndex = allTabLogs.findIndex(
+        l => l.timestamp === log.timestamp && l.tabId === log.tabId
+      );
+      if (logIndex >= 0 && logIndex < allTabLogs.length - 1) {
+        const nextLog = allTabLogs[logIndex + 1];
+        const currentMs = new Date(log.timestamp).getTime();
+        const nextMs = new Date(nextLog.timestamp).getTime();
+        const diffMs = nextMs - currentMs;
+
+        if (diffMs > 0 && diffMs < 1800000) {
+          // 30분 제한
+          return {
+            ...cleanLog,
+            actualTime: diffMs,
+            endTime: nextLog.timestamp,
+            calculatedFromNext: true,
+          };
+        }
+      }
+
+      // 다음 로그가 없거나 계산할 수 없는 경우 기본값 사용
+      const defaultEndTime = new Date(
+        new Date(log.timestamp).getTime() + 5000
+      ).toISOString();
+      return {
+        ...cleanLog,
+        actualTime: 5000, // 5초 기본값 (과대계산 방지)
+        endTime: defaultEndTime,
+        calculatedDefault: true,
+      };
+    });
   }
 
   // =========================================================================
@@ -1136,10 +1213,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
         if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
       }
-      if (!eMs)
-        eMs = isTabTrackerEnabled
-          ? Math.min(sMs + 10800000, Date.now())
-          : sMs + 30000;
+      if (!eMs) eMs = sMs + 5000; // 기본 5초 사용 (과대계산 방지)
 
       const a = Math.max(sMs, new Date(currentFilters.startDate).getTime());
       const b = Math.min(eMs, new Date(currentFilters.endDate).getTime());
@@ -1314,13 +1388,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       g.records.push(rec);
     });
 
-    // 각 일별로 getUnionTimeSeconds와 동일한 방식으로 계산
+    // 각 일별로 통일된 시간 계산 방식 사용
     for (const [key, g] of groups) {
-      // 각 일별로 해당 일의 시작과 끝 시간을 계산
       const dayStart = new Date(g.dateMs);
-      const dayEnd = new Date(g.dateMs + 24 * 60 * 60 * 1000); // 24시간 후
+      const dayEnd = new Date(g.dateMs + 24 * 60 * 60 * 1000);
 
-      // 전체 조회 범위와 일별 범위의 교집합을 사용
       const effectiveStart = new Date(
         Math.max(dayStart.getTime(), new Date(start).getTime())
       );
@@ -1328,52 +1400,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         Math.min(dayEnd.getTime(), new Date(end).getTime())
       );
 
-      // getUnionTimeSeconds와 동일한 방식으로 계산
-      const intervals = [];
-      for (const rec of g.records) {
-        const sMs = new Date(rec.timestamp).getTime();
-        if (!Number.isFinite(sMs)) continue;
-
-        let eMs = null;
-        if (rec.endTime) {
-          const t = new Date(rec.endTime).getTime();
-          if (Number.isFinite(t) && t > sMs) eMs = t;
-        }
-        if (!eMs && rec.actualTime && rec.actualTime > 0)
-          eMs = sMs + rec.actualTime;
-        if (!eMs) {
-          let nextMs =
-            getNextTimestampSameTabMs(rec) || getNextTimestampMs(sMs);
-          if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
-        }
-        if (!eMs)
-          eMs = isTabTrackerEnabled
-            ? Math.min(sMs + 10800000, Date.now())
-            : sMs + 30000;
-
-        // 일별 범위로 클리핑
-        const a = Math.max(sMs, effectiveStart.getTime());
-        const b = Math.min(eMs, effectiveEnd.getTime());
-        if (b > a) intervals.push([a, b]);
-      }
-
-      // getUnionTimeSeconds와 동일한 방식으로 겹치는 구간 합치기
-      if (intervals.length > 0) {
-        intervals.sort((x, y) => x[0] - y[0]);
-        let [curS, curE] = intervals[0];
-        let total = 0;
-        for (let i = 1; i < intervals.length; i++) {
-          const [s, e] = intervals[i];
-          if (s <= curE) curE = Math.max(curE, e);
-          else {
-            total += curE - curS;
-            curS = s;
-            curE = e;
-          }
-        }
-        total += curE - curS;
-        g.totalSeconds = Math.round(total / 1000);
-      }
+      // getUnionTimeSeconds 함수를 직접 사용하여 일관성 보장
+      g.totalSeconds = getUnionTimeSeconds(
+        effectiveStart,
+        effectiveEnd,
+        g.records
+      );
 
       // 사이트별 통계 계산 (중복 제거 후)
       for (const rec of g.records) {
@@ -1427,13 +1459,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       g.records.push(rec);
     });
 
-    // 각 시간대별로 getUnionTimeSeconds와 동일한 방식으로 계산
+    // 각 시간대별로 통일된 시간 계산 방식 사용
     for (const [key, g] of groups) {
-      // 각 시간대별로 해당 시간대의 시작과 끝 시간을 계산
       const hourStart = new Date(g.dateMs);
-      const hourEnd = new Date(g.dateMs + 60 * 60 * 1000); // 1시간 후
+      const hourEnd = new Date(g.dateMs + 60 * 60 * 1000);
 
-      // 전체 조회 범위와 시간대 범위의 교집합을 사용
       const effectiveStart = new Date(
         Math.max(hourStart.getTime(), new Date(start).getTime())
       );
@@ -1441,52 +1471,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         Math.min(hourEnd.getTime(), new Date(end).getTime())
       );
 
-      // getUnionTimeSeconds와 동일한 방식으로 계산
-      const intervals = [];
-      for (const rec of g.records) {
-        const sMs = new Date(rec.timestamp).getTime();
-        if (!Number.isFinite(sMs)) continue;
-
-        let eMs = null;
-        if (rec.endTime) {
-          const t = new Date(rec.endTime).getTime();
-          if (Number.isFinite(t) && t > sMs) eMs = t;
-        }
-        if (!eMs && rec.actualTime && rec.actualTime > 0)
-          eMs = sMs + rec.actualTime;
-        if (!eMs) {
-          let nextMs =
-            getNextTimestampSameTabMs(rec) || getNextTimestampMs(sMs);
-          if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
-        }
-        if (!eMs)
-          eMs = isTabTrackerEnabled
-            ? Math.min(sMs + 10800000, Date.now())
-            : sMs + 30000;
-
-        // 시간대 범위로 클리핑
-        const a = Math.max(sMs, effectiveStart.getTime());
-        const b = Math.min(eMs, effectiveEnd.getTime());
-        if (b > a) intervals.push([a, b]);
-      }
-
-      // getUnionTimeSeconds와 동일한 방식으로 겹치는 구간 합치기
-      if (intervals.length > 0) {
-        intervals.sort((x, y) => x[0] - y[0]);
-        let [curS, curE] = intervals[0];
-        let total = 0;
-        for (let i = 1; i < intervals.length; i++) {
-          const [s, e] = intervals[i];
-          if (s <= curE) curE = Math.max(curE, e);
-          else {
-            total += curE - curS;
-            curS = s;
-            curE = e;
-          }
-        }
-        total += curE - curS;
-        g.totalSeconds = Math.round(total / 1000);
-      }
+      // getUnionTimeSeconds 함수를 직접 사용하여 일관성 보장
+      g.totalSeconds = getUnionTimeSeconds(
+        effectiveStart,
+        effectiveEnd,
+        g.records
+      );
 
       // 사이트별 통계 계산 (중복 제거 후)
       for (const rec of g.records) {
@@ -1546,52 +1536,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         Math.min(weekEnd.getTime(), new Date(end).getTime())
       );
 
-      // getUnionTimeSeconds와 동일한 방식으로 계산
-      const intervals = [];
-      for (const rec of g.records) {
-        const sMs = new Date(rec.timestamp).getTime();
-        if (!Number.isFinite(sMs)) continue;
-
-        let eMs = null;
-        if (rec.endTime) {
-          const t = new Date(rec.endTime).getTime();
-          if (Number.isFinite(t) && t > sMs) eMs = t;
-        }
-        if (!eMs && rec.actualTime && rec.actualTime > 0)
-          eMs = sMs + rec.actualTime;
-        if (!eMs) {
-          let nextMs =
-            getNextTimestampSameTabMs(rec) || getNextTimestampMs(sMs);
-          if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
-        }
-        if (!eMs)
-          eMs = isTabTrackerEnabled
-            ? Math.min(sMs + 10800000, Date.now())
-            : sMs + 30000;
-
-        // 주별 범위로 클리핑
-        const a = Math.max(sMs, effectiveStart.getTime());
-        const b = Math.min(eMs, effectiveEnd.getTime());
-        if (b > a) intervals.push([a, b]);
-      }
-
-      // getUnionTimeSeconds와 동일한 방식으로 겹치는 구간 합치기
-      if (intervals.length > 0) {
-        intervals.sort((x, y) => x[0] - y[0]);
-        let [curS, curE] = intervals[0];
-        let total = 0;
-        for (let i = 1; i < intervals.length; i++) {
-          const [s, e] = intervals[i];
-          if (s <= curE) curE = Math.max(curE, e);
-          else {
-            total += curE - curS;
-            curS = s;
-            curE = e;
-          }
-        }
-        total += curE - curS;
-        g.totalSeconds = Math.round(total / 1000);
-      }
+      // getUnionTimeSeconds 함수를 직접 사용하여 일관성 보장
+      g.totalSeconds = getUnionTimeSeconds(
+        effectiveStart,
+        effectiveEnd,
+        g.records
+      );
 
       // 사이트별 통계 계산 (중복 제거 후)
       for (const rec of g.records) {
@@ -1907,10 +1857,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         let nextMs = getNextTimestampSameTabMs(log) || getNextTimestampMs(sMs);
         if (nextMs && nextMs > sMs && nextMs - sMs < 10800000) eMs = nextMs;
       }
-      if (!eMs)
-        eMs = isTabTrackerEnabled
-          ? Math.min(sMs + 10800000, Date.now())
-          : sMs + 30000;
+      if (!eMs) eMs = sMs + 5000; // 기본 5초 사용 (과대계산 방지)
 
       const a = Math.max(sMs, new Date(currentFilters.startDate).getTime());
       const b = Math.min(eMs, new Date(currentFilters.endDate).getTime());
@@ -2103,7 +2050,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showLoading(true);
 
       // 모든 로그 삭제
-      await chrome.storage.local.set({ tabLogs: [] });
+      await chrome.storage.local.set({ tabLogs: {} });
 
       // 데이터 새로고침
       await loadData();

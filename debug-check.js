@@ -11,66 +11,90 @@ chrome.storage.local.get(null, result => {
   console.log("⏱️ 스톱워치 상태:", result.isStopwatchEnabled);
 
   if (result.tabLogs) {
-    console.log(`📝 총 로그 수: ${result.tabLogs.length}`);
+    // 새로운 구조: tabLogs = {날짜: [로그들]}
+    if (typeof result.tabLogs === "object" && !Array.isArray(result.tabLogs)) {
+      console.log("📝 새로운 구조 감지:");
+      console.log(`📅 저장된 날짜 수: ${Object.keys(result.tabLogs).length}개`);
 
-    if (result.tabLogs.length > 0) {
-      console.log("📋 최근 5개 로그:");
-      result.tabLogs.slice(-5).forEach((log, index) => {
-        console.log(
-          `  ${index + 1}. ${log.domain} - ${log.title.substring(0, 30)} (${
-            log.timeFormatted
-          })`
-        );
+      // 모든 로그를 합치기
+      const allLogs = [];
+      Object.entries(result.tabLogs).forEach(([date, logs]) => {
+        console.log(`  ${date}: ${logs.length}개 로그`);
+        allLogs.push(...logs);
       });
 
-      console.log("\n📈 도메인별 로그 수:");
-      const domainCounts = {};
-      result.tabLogs.forEach(log => {
-        domainCounts[log.domain] = (domainCounts[log.domain] || 0) + 1;
-      });
-      Object.entries(domainCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .forEach(([domain, count]) => {
-          console.log(`  ${domain}: ${count}개`);
+      console.log(`📝 총 로그 수: ${allLogs.length}`);
+
+      if (allLogs.length > 0) {
+        // 시간순 정렬
+        allLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        console.log("📋 최근 5개 로그:");
+        allLogs.slice(-5).forEach((log, index) => {
+          console.log(
+            `  ${index + 1}. ${log.domain} - ${log.title.substring(0, 30)} (${
+              log.timestamp
+            })`
+          );
         });
 
-      // 실제 사용 시간 분석
-      console.log("\n⏰ 실제 사용 시간 분석:");
-      const timeAnalysis = result.tabLogs.filter(
-        log => log.actualTime !== null && log.actualTime !== undefined
-      );
-      if (timeAnalysis.length > 0) {
-        const totalActualTime = timeAnalysis.reduce(
-          (sum, log) => sum + (log.actualTime || 0),
-          0
-        );
-        const avgActualTime = totalActualTime / timeAnalysis.length;
-        console.log(
-          `  총 실제 사용 시간: ${Math.round(totalActualTime / 1000)}초`
-        );
-        console.log(
-          `  평균 실제 사용 시간: ${Math.round(avgActualTime / 1000)}초`
-        );
-        console.log(`  실제 시간이 기록된 로그: ${timeAnalysis.length}개`);
-
-        // 비정상적으로 긴 시간 로그 확인
-        const longTimeLogs = timeAnalysis.filter(
-          log => log.actualTime > 60 * 60 * 1000
-        ); // 1시간 이상
-        if (longTimeLogs.length > 0) {
-          console.log(`  ⚠️ 1시간 이상 사용된 로그: ${longTimeLogs.length}개`);
-          longTimeLogs.slice(0, 3).forEach(log => {
-            console.log(
-              `    - ${log.domain}: ${Math.round(log.actualTime / 1000)}초`
-            );
+        console.log("\n📈 도메인별 로그 수:");
+        const domainCounts = {};
+        allLogs.forEach(log => {
+          domainCounts[log.domain] = (domainCounts[log.domain] || 0) + 1;
+        });
+        Object.entries(domainCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .forEach(([domain, count]) => {
+            console.log(`  ${domain}: ${count}개`);
           });
+
+        // 실제 사용 시간 분석
+        console.log("\n⏰ 실제 사용 시간 분석:");
+        const timeAnalysis = allLogs.filter(
+          log => log.actualTime !== null && log.actualTime !== undefined
+        );
+        if (timeAnalysis.length > 0) {
+          const totalActualTime = timeAnalysis.reduce(
+            (sum, log) => sum + (log.actualTime || 0),
+            0
+          );
+          const avgActualTime = totalActualTime / timeAnalysis.length;
+          console.log(
+            `  총 실제 사용 시간: ${Math.round(totalActualTime / 1000)}초`
+          );
+          console.log(
+            `  평균 실제 사용 시간: ${Math.round(avgActualTime / 1000)}초`
+          );
+          console.log(`  실제 시간이 기록된 로그: ${timeAnalysis.length}개`);
+
+          // 비정상적으로 긴 시간 로그 확인
+          const longTimeLogs = timeAnalysis.filter(
+            log => log.actualTime > 60 * 60 * 1000
+          ); // 1시간 이상
+          if (longTimeLogs.length > 0) {
+            console.log(
+              `  ⚠️ 1시간 이상 사용된 로그: ${longTimeLogs.length}개`
+            );
+            longTimeLogs.slice(0, 3).forEach(log => {
+              console.log(
+                `    - ${log.domain}: ${Math.round(log.actualTime / 1000)}초`
+              );
+            });
+          }
+        } else {
+          console.log("  ❌ 실제 사용 시간이 기록된 로그가 없습니다!");
         }
       } else {
-        console.log("  ❌ 실제 사용 시간이 기록된 로그가 없습니다!");
+        console.log("❌ 저장된 로그가 없습니다!");
       }
+    } else if (Array.isArray(result.tabLogs)) {
+      // 이전 구조 (배열)
+      console.log("📝 이전 구조 감지 (배열)");
+      console.log(`📝 총 로그 수: ${result.tabLogs.length}`);
     } else {
-      console.log("❌ 저장된 로그가 없습니다!");
+      console.log("❓ 알 수 없는 tabLogs 구조:", typeof result.tabLogs);
     }
   } else {
     console.log("❌ tabLogs 데이터가 없습니다!");
@@ -150,27 +174,45 @@ window.TabbyMansion.diagnoseData = async function () {
     }
 
     // 로그 데이터 확인
-    if (!data.tabLogs || data.tabLogs.length === 0) {
+    if (!data.tabLogs) {
       issues.push("탭 로그 데이터가 없습니다");
-    } else {
-      // 실제 사용 시간이 없는 로그 확인
-      const logsWithoutActualTime = data.tabLogs.filter(
-        log => log.actualTime === null || log.actualTime === undefined
-      );
-      if (logsWithoutActualTime.length > 0) {
-        issues.push(
-          `${logsWithoutActualTime.length}개의 로그에 실제 사용 시간이 기록되지 않았습니다`
-        );
-      }
+    } else if (
+      typeof data.tabLogs === "object" &&
+      !Array.isArray(data.tabLogs)
+    ) {
+      // 새로운 구조
+      const allLogs = [];
+      Object.values(data.tabLogs).forEach(logs => {
+        allLogs.push(...logs);
+      });
 
-      // 비정상적으로 긴 시간 로그 확인
-      const longTimeLogs = data.tabLogs.filter(
-        log => log.actualTime && log.actualTime > 60 * 60 * 1000
-      );
-      if (longTimeLogs.length > 0) {
-        issues.push(
-          `${longTimeLogs.length}개의 로그가 1시간 이상으로 비정상적으로 긴 시간을 기록했습니다`
+      if (allLogs.length === 0) {
+        issues.push("탭 로그 데이터가 비어있습니다");
+      } else {
+        // 실제 사용 시간이 없는 로그 확인
+        const logsWithoutActualTime = allLogs.filter(
+          log => log.actualTime === null || log.actualTime === undefined
         );
+        if (logsWithoutActualTime.length > 0) {
+          issues.push(
+            `${logsWithoutActualTime.length}개의 로그에 실제 사용 시간이 기록되지 않았습니다`
+          );
+        }
+
+        // 비정상적으로 긴 시간 로그 확인
+        const longTimeLogs = allLogs.filter(
+          log => log.actualTime && log.actualTime > 60 * 60 * 1000
+        );
+        if (longTimeLogs.length > 0) {
+          issues.push(
+            `${longTimeLogs.length}개의 로그가 1시간 이상으로 비정상적으로 긴 시간을 기록했습니다`
+          );
+        }
+      }
+    } else if (Array.isArray(data.tabLogs)) {
+      // 이전 구조
+      if (data.tabLogs.length === 0) {
+        issues.push("탭 로그 데이터가 비어있습니다");
       }
     }
 
@@ -194,7 +236,22 @@ window.TabbyMansion.diagnoseData = async function () {
 // 실시간 상태 모니터링
 setInterval(() => {
   chrome.storage.local.get(["isTabTrackerEnabled", "tabLogs"], result => {
-    const logCount = result.tabLogs ? result.tabLogs.length : 0;
+    let logCount = 0;
+    if (result.tabLogs) {
+      if (
+        typeof result.tabLogs === "object" &&
+        !Array.isArray(result.tabLogs)
+      ) {
+        // 새로운 구조
+        logCount = Object.values(result.tabLogs).reduce(
+          (sum, logs) => sum + logs.length,
+          0
+        );
+      } else if (Array.isArray(result.tabLogs)) {
+        // 이전 구조
+        logCount = result.tabLogs.length;
+      }
+    }
     console.log(
       `📊 실시간 상태 - 트래커: ${result.isTabTrackerEnabled}, 로그: ${logCount}개`
     );

@@ -8,9 +8,13 @@
     "date-fns-tz": "^3.2.0"
   },
   "scripts": {
-    "build": "set NODE_ENV=production && webpack --config webpack.config.js && node build.js",
+    "build": "npm run build:prod",
+    "build:test": "set NODE_ENV=test && webpack --config webpack.config.js && node build.js",
+    "build:prod": "set NODE_ENV=production && webpack --config webpack.config.js && node build.js",
+    "build:dev": "set NODE_ENV=development && webpack --config webpack.config.js && node build.js",
     "dev": "set NODE_ENV=development && webpack --config webpack.config.js --watch",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "npm run build:test"
   },
   "keywords": [
     "chrome-extension",
